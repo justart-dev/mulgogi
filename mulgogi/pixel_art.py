@@ -177,9 +177,8 @@ def fish_sprite(fish_id: str) -> Text:
 def fish_icon(fish_id: str, caught: bool = True) -> Text:
     """Return a small 2-line icon for list views."""
     sprite = fish_sprite(fish_id)
-    lines = str(sprite).splitlines()
-    icon_lines = lines[:2]
-    text = Text("\n").join(Text(line) for line in icon_lines)
+    lines = sprite.split("\n")[:2]
+    text = Text("\n").join(lines)
     if not caught:
         text.stylize("dim #555555")
     return text

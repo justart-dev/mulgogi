@@ -588,7 +588,7 @@ class ShopScreen(Screen):
             yield PlainStatic("상점", classes="title")
             yield PlainStatic(f"보유 골드: {self.state.player.gold}", id="gold")
             yield PlainStatic("")
-            yield PlainStatic("남싯대", classes="section")
+            yield PlainStatic("낚싯대", classes="section")
             for rod in ROD_DATA:
                 owned = rod.id == self.state.player.rod_id
                 status = "(소유 중)" if owned else f"{rod.price} 골드"
