@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mulgogi"
+version = "0.2.0"
+description = "A fishing game in your terminal"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [
+    {name = "justart-dev", email = "justart-dev@users.noreply.github.com"}
+]
+keywords = ["cli", "game", "fishing", "terminal", "tui"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Games/Entertainment",
+]
+dependencies = [
+    "textual>=0.70.0",
+]
+
+[project.scripts]
+mulgogi = "mulgogi.main:main"
+
+[project.urls]
+Homepage = "https://github.com/justart-dev/mulgogi"
+Repository = "https://github.com/justart-dev/mulgogi"
+Issues = "https://github.com/justart-dev/mulgogi/issues"
