@@ -1,5 +1,6 @@
 """TUI 화면 구성"""
 
+import math
 import random
 import time
 from datetime import datetime
@@ -82,15 +83,19 @@ class AngleWidget(Static):
         length = 10
         x, y = 15, 5
         grid = [[" " for _ in range(40)] for _ in range(8)]
+        rad = math.radians(self.angle)
+        dx = math.cos(rad)
+        dy = -math.sin(rad)
         for i in range(length):
-            px = x + int(round(i * 0.7))
-            py = y - int(round(i * 0.7))
-            if 0 <= px < 40 and 0 <= py < 8:
-                grid[py][px] = "/" if i < length - 1 else "@"
+            px = x + int(round(i * dx * 0.8))
+            py = y + int(round(i * dy * 0.8))
+            px = max(0, min(39, px))
+            py = max(0, min(7, py))
+            grid[py][px] = "/" if i < length - 1 else "@"
         grid[5][12] = "O"
         lines = ["".join(row) for row in grid]
         lines_joined = "\n".join(lines)
-        return f"{lines_joined}\n\n각도: {self.angle}° (장식용)"
+        return f"{lines_joined}\n\n각도: {self.angle}°"
 
 
 class ReelWidget(Static):
@@ -222,7 +227,7 @@ class FishingScreen(Screen):
         p = self.state.player
         rod = self.state.current_rod()
         bait = self.state.current_bait()
-        title_tag = f"[{p.title}] " if p.title else ""
+        title_tag = f"({p.title}) " if p.title else ""
         return f"{title_tag}Lv.{p.level}  골드:{p.gold}  낚싯대:{rod.name}  미끼:{bait.name if bait else '-'}"
 
     def _spot_text(self) -> str:
@@ -387,7 +392,7 @@ class FishingScreen(Screen):
         self.query_one("#result", Static).update(
             f"[green]{fish.name}을(를) 잡았다![/]{level_text}{ach_text}\n\n"
             f"{fish.ascii}\n\n"
-            f"무게: {weight}kg  |  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\\n"
+            f"무게: {weight}kg  |  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\n"
             f"골드 +{gold}  경험치 +{exp}\n"
         )
 
@@ -426,7 +431,7 @@ class FishingScreen(Screen):
         self.query_one("#angle", AngleWidget).display = True
         self.query_one("#splash", SplashWidget).display = False
         self.query_one("#reel", ReelWidget).display = False
-        self.query_one("#help", Static).update("← →: 각도  |  Space: 캐스트/입질/릴  |  Esc: 뒤로")
+        self.query_one("#help", Static).update("← →: 각도 조절  |  Space: 캐스트/입질/릴  |  Esc: 뒤로")
         self.query_one("#result", Static).update("")
 
     def action_back(self):
@@ -483,18 +488,18 @@ class ShopScreen(Screen):
             yield Static("상점", classes="title")
             yield Static(f"보유 골드: {self.state.player.gold}", id="gold")
             yield Static("")
-            yield Static("[낚싯대]", classes="section")
+            yield Static("[bold]낚싯대[/bold]", classes="section")
             for rod in ROD_DATA:
                 owned = rod.id == self.state.player.rod_id
-                status = "[소유 중]" if owned else f"{rod.price} 골드"
+                status = "(소유 중)" if owned else f"{rod.price} 골드"
                 btn = Button(f"{rod.name} - {status}", id=f"rod-{rod.id}", disabled=owned)
                 btn.description = rod.description
                 yield btn
             yield Static("")
-            yield Static("[미끼]", classes="section")
+            yield Static("[bold]미끼[/bold]", classes="section")
             for bait in BAIT_DATA:
                 owned = bait.id == self.state.player.bait_id
-                status = "[장비 중]" if owned else f"{bait.price} 골드"
+                status = "(장비 중)" if owned else f"{bait.price} 골드"
                 btn = Button(f"{bait.name} - {status}", id=f"bait-{bait.id}", disabled=owned)
                 btn.description = bait.description
                 yield btn
@@ -548,13 +553,13 @@ class ShopScreen(Screen):
     def _update_shop_buttons(self):
         for rod in ROD_DATA:
             owned = rod.id == self.state.player.rod_id
-            status = "[소유 중]" if owned else f"{rod.price} 골드"
+            status = "(소유 중)" if owned else f"{rod.price} 골드"
             btn = self.query_one(f"#rod-{rod.id}", Button)
             btn.label = f"{rod.name} - {status}"
             btn.disabled = owned
         for bait in BAIT_DATA:
             owned = bait.id == self.state.player.bait_id
-            status = "[장비 중]" if owned else f"{bait.price} 골드"
+            status = "(장비 중)" if owned else f"{bait.price} 골드"
             btn = self.query_one(f"#bait-{bait.id}", Button)
             btn.label = f"{bait.name} - {status}"
             btn.disabled = owned
@@ -620,7 +625,7 @@ class AchievementsScreen(Screen):
             active = self.state.player.title or "없음"
             yield Static(f"장착 칭호: {active}", id="active-title")
             yield Static("")
-            yield Static("[업적 목록]", classes="section")
+            yield Static("[bold]업적 목록[/bold]", classes="section")
             for ach in ACHIEVEMENT_DATA.values():
                 unlocked = ach.id in self.state.achievements
                 mark = "[green]✓[/]" if unlocked else "[dim]-[/]"
@@ -630,7 +635,7 @@ class AchievementsScreen(Screen):
                     line = f"[dim]{line}[/]"
                 yield Static(line)
             yield Static("")
-            yield Static("[칭호]", classes="section")
+            yield Static("[bold]칭호[/bold]", classes="section")
             unlocked_titles = [
                 ach.title for ach in ACHIEVEMENT_DATA.values()
                 if ach.title and ach.id in self.state.achievements
