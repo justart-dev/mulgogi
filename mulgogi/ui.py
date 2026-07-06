@@ -9,10 +9,10 @@ from rich.console import RenderableType
 from rich.text import Text
 
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.containers import Vertical
 from textual.reactive import reactive
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, Static
+from textual.widgets import Button, Footer, Static
 
 from .data import (
     ACHIEVEMENT_DATA,
@@ -28,9 +28,9 @@ from .data import (
     RARITY_STARS,
     Fish,
 )
-from .game import GameState, save_state, save_screenshot
+from .game import GameState, save_state
 from .particles import ParticleEmitter, ParticleOverlay
-from .pixel_art import fish_icon, fish_sprite
+from .pixel_art import fish_sprite
 
 
 def current_time_of_day() -> str:
@@ -197,13 +197,12 @@ class MainMenuScreen(Screen):
     ]
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         with Vertical(classes="menu"):
             yield PlainStatic(Text.assemble(("~$ ", "#33d9b2"), ("mulgogi", "#f0f0f0")), classes="prompt")
             yield PlainStatic(MULGOGI_ASCII, classes="title")
             yield PlainStatic(gradient_text("터미널에서 즐기는 낚시 게임", ["#33d9b2", "#f1fa8c"]), classes="subtitle")
             yield PlainStatic("")
-            yield Button("1. 낚시하기", id="fish", variant="primary")
+            yield Button("1. 낚시하기", id="fish")
             yield Button("2. 도감", id="collection")
             yield Button("3. 상점", id="shop")
             yield Button("4. 업적", id="achievements")
@@ -285,13 +284,10 @@ class FishingScreen(Screen):
         self.reel_pos = 0.0
         self.reel_dir = 1
         self.reel_speed = 0.06
-        self.last_result = None
-        self.last_catch = None
         self.weather = current_weather()
         self.time_of_day = current_time_of_day()
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         with Vertical(id="fishing-main"):
             yield PlainStatic(self._status_text(), id="status")
             yield PlainStatic(self._spot_text(), id="spot-info")
@@ -342,8 +338,6 @@ class FishingScreen(Screen):
         elif self.phase == "result":
             if key == "space":
                 self.reset()
-            elif key in ("s", "S"):
-                self.save_screenshot()
 
     def start_cast(self):
         self.phase = "waiting"
@@ -353,7 +347,7 @@ class FishingScreen(Screen):
         self.query_one("#angle", AngleWidget).display = False
         self.query_one("#splash", SplashWidget).display = True
         self.query_one("#result", PlainStatic).update("")
-        delay = random.uniform(1.5, 4.0)
+        delay = random.uniform(3.0, 10.0)
         self.bite_timer = self.set_timer(delay, self.trigger_bite)
 
     def trigger_bite(self):
@@ -463,16 +457,8 @@ class FishingScreen(Screen):
             names = ""
             title_text = ""
 
-        self.last_catch = {
-            "fish": fish,
-            "weight": weight,
-            "gold": gold,
-            "exp": exp,
-            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
         self.query_one("#status", Static).update(self._status_text())
-        self.query_one("#help", Static).update("Space: 계속  |  S: 스크린샷 저장  |  Esc: 뒤로")
+        self.query_one("#help", Static).update("Space: 계속  |  Esc: 뒤로")
         result_text = Text.assemble(
             (f"{fish.name}을(를) 잡았다!", "green"),
             (" ★ 레벨업!", "bold yellow") if leveled_up else ("", ""),
@@ -491,30 +477,6 @@ class FishingScreen(Screen):
         self.query_one("#help", Static).update("Space: 계속  |  Esc: 뒤로")
         self.query_one("#result", PlainStatic).update(Text("물고기가 도망갔다... 다시 도전해보자.", style="red"))
         save_state(self.state)
-
-    def save_screenshot(self):
-        if not self.last_catch:
-            return
-        info = self.last_catch
-        fish = info["fish"]
-        lines = [
-            "╔" + "═" * 38 + "╗",
-            "║" + " mulgogi 터미널 낚시 기록 ".center(38) + "║",
-            "╠" + "═" * 38 + "╣",
-        ]
-        for raw in fish.ascii.splitlines():
-            lines.append("║" + raw.center(38) + "║")
-        lines.extend([
-            "╠" + "═" * 38 + "╣",
-            f"║ {fish.name} ({RARITY_NAMES[fish.rarity]})".ljust(39) + "║",
-            f"║ 무게: {info['weight']}kg".ljust(39) + "║",
-            f"║ 골드 +{info['gold']}  경험치 +{info['exp']}".ljust(39) + "║",
-            f"║ {info['time']}".ljust(39) + "║",
-            "╚" + "═" * 38 + "╝",
-        ])
-        content = "\n".join(lines)
-        path = save_screenshot(content)
-        self.query_one("#help", Static).update(f"스크린샷 저장: {path}")
 
     def reset(self):
         self.phase = "menu"
@@ -541,29 +503,25 @@ class CollectionScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         with Vertical(classes="collection"):
             yield PlainStatic("도감", classes="title")
             yield PlainStatic(f"총 {len(FISH_DATA)}종 중 {len(self.state.collection)}종 잡음", id="count")
             yield PlainStatic("")
-            with VerticalScroll(id="fish-list"):
-                for fish in FISH_DATA:
-                    rec = self.state.collection.get(fish.id)
-                    caught = rec is not None
-                    icon = fish_icon(fish.id, caught=caught)
-                    if caught:
-                        info = Text.assemble(
-                            (fish.name, "bold #f0f0f0"),
-                            f"  {RARITY_STARS[fish.rarity]}  최대 {rec.max_weight}kg  x{rec.count}",
-                        )
-                    else:
-                        info = Text.assemble(
-                            ("? ? ?", "dim"),
-                            f"  {RARITY_STARS[fish.rarity]}  ???",
-                        )
-                    with Horizontal(classes="fish-row"):
-                        yield PlainStatic(icon, classes="fish-icon")
-                        yield PlainStatic(info, classes="fish-info")
+            fish_lines = []
+            for fish in FISH_DATA:
+                rec = self.state.collection.get(fish.id)
+                if rec:
+                    line = Text.assemble(
+                        ("✓", "green"),
+                        f" {fish.name}  {RARITY_STARS[fish.rarity]}  최대 {rec.max_weight}kg  x{rec.count}",
+                    )
+                else:
+                    line = Text.assemble(
+                        ("? ? ?", "dim"),
+                        f"  {RARITY_STARS[fish.rarity]}  ???",
+                    )
+                fish_lines.append(line)
+            yield PlainStatic(Text("\n").join(fish_lines), id="fish-list")
             yield PlainStatic("")
             yield PlainStatic("Esc 또는 q: 뒤로", id="help")
         yield Footer()
@@ -583,7 +541,6 @@ class ShopScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         with Vertical(classes="shop"):
             yield PlainStatic("상점", classes="title")
             yield PlainStatic(f"보유 골드: {self.state.player.gold}", id="gold")
@@ -679,7 +636,6 @@ class StatsScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         with Vertical(classes="stats"):
             yield PlainStatic("통계", classes="title")
             s = self.state.stats
@@ -719,7 +675,6 @@ class AchievementsScreen(Screen):
         self._title_buttons: dict[str, str] = {}
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         with Vertical(classes="achievements"):
             yield PlainStatic("업적", classes="title")
             active = self.state.player.title or "없음"
@@ -782,7 +737,6 @@ class SpotSelectScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         with Vertical(classes="spots"):
             yield PlainStatic("낚시터 선택", classes="title")
             yield PlainStatic("원하는 낚시터를 선택하세요.")

@@ -228,13 +228,3 @@ def save_state(state: GameState):
         if tmp.exists():
             tmp.unlink()
         raise
-
-
-def save_screenshot(content: str) -> Path:
-    """ASCII 스크린샷을 파일로 저장하고 경로를 반환"""
-    screenshot_dir = SAVE_DIR / "screenshots"
-    screenshot_dir.mkdir(parents=True, exist_ok=True)
-    now = time.strftime("%Y%m%d_%H%M%S")
-    path = screenshot_dir / f"mulgogi_{now}.txt"
-    path.write_text(content, encoding="utf-8")
-    return path
