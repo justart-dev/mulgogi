@@ -624,6 +624,34 @@ class ShopScreen(Screen):
     def action_back(self):
         self.app.pop_screen()
 
+    def on_mount(self):
+        buttons = list(self.query(Button))
+        for btn in buttons:
+            if not btn.disabled:
+                btn.focus()
+                break
+
+    def _enabled_buttons(self):
+        return [btn for btn in self.query(Button) if not btn.disabled]
+
+    def on_key(self, event):
+        if event.key not in ("up", "down"):
+            return
+        buttons = self._enabled_buttons()
+        if not buttons:
+            return
+        current = self.app.focused
+        try:
+            idx = buttons.index(current)
+        except ValueError:
+            idx = 0
+        if event.key == "down":
+            idx = (idx + 1) % len(buttons)
+        elif event.key == "up":
+            idx = (idx - 1) % len(buttons)
+        buttons[idx].focus()
+        event.stop()
+
 
 class StatsScreen(Screen):
     BINDINGS = [
@@ -786,6 +814,34 @@ class SpotSelectScreen(Screen):
         if button_id.startswith("spot-"):
             spot_id = button_id.replace("spot-", "")
             self.app.push_screen(FishingScreen(self.app.game_state, spot_id))
+
+    def on_mount(self):
+        buttons = list(self.query(Button))
+        for btn in buttons:
+            if not btn.disabled:
+                btn.focus()
+                break
+
+    def _enabled_buttons(self):
+        return [btn for btn in self.query(Button) if not btn.disabled]
+
+    def on_key(self, event):
+        if event.key not in ("up", "down"):
+            return
+        buttons = self._enabled_buttons()
+        if not buttons:
+            return
+        current = self.app.focused
+        try:
+            idx = buttons.index(current)
+        except ValueError:
+            idx = 0
+        if event.key == "down":
+            idx = (idx + 1) % len(buttons)
+        elif event.key == "up":
+            idx = (idx - 1) % len(buttons)
+        buttons[idx].focus()
+        event.stop()
 
     def action_back(self):
         self.app.pop_screen()

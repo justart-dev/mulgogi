@@ -80,13 +80,19 @@ FISH_DATA: List[Fish] = [
     Fish("shark", "상어", "      /\\\n     /  \\\n    /    \\\n   /______\\\n  (  o  o  )\n   \\  ==  /\n    \\____/", 20.0, 80.0, 5, 4, "night", "any", 600, 300),
     Fish("marlin", "청새치", "     /|\n    / |\n   /  |\n  /   |\n<(    |\n  \\   |\n   \\__|", 15.0, 60.0, 5, 5, "dawn", "any", 1500, 750),
     Fish("whale", "고래", "   __---__\n  /  O O  \\\n |    >    |\n  \\_______/", 50.0, 150.0, 5, 5, "night", "rainy", 2000, 1000),
+    Fish("koi", "비단잉어", "  \\\\*/\n*<(o o)>*\n  /| |\\\\", 1.0, 4.0, 3, 3, "day", "sunny", 80, 40),
+    Fish("zander", "샌더어", "   /\\\\\n__/ o\\__\n  \\____/", 2.0, 6.0, 3, 3, "night", "any", 90, 45),
+    Fish("piranha", "피라냐", "   /\\\\\n__/ \\//\\__\n  \\____/", 0.5, 1.5, 2, 2, "day", "sunny", 30, 15),
+    Fish("red_snapper", "붉은돖", "  .---.\n<( o )>\n  `---'", 1.0, 4.0, 2, 2, "day", "any", 40, 20),
+    Fish("swordfish", "황새치", "     /|\n    / |\n   /  |\n  /   |\n<(    |\n  \\   |\n   \\__|", 10.0, 40.0, 4, 4, "dawn", "any", 500, 250),
+    Fish("jellyfish", "해파리", "   .---.\n  / o o \\\n |   <   |\n  \\  -  /\n   `---'", 0.5, 2.0, 1, 1, "night", "rainy", 15, 8),
 ]
 
 SPOT_DATA: List[Spot] = [
-    Spot("pond", "연못", 1, ["carp", "crucian", "bluegill", "tilapia", "trout"], "조용한 연못. 초보자에겐 딱 좋다."),
-    Spot("river", "강가", 3, ["carp", "trout", "catfish", "pike", "bluegill", "tilapia", "perch", "sturgeon"], "흔드는 물에서 낚시를 도전해보자."),
-    Spot("lake", "호수", 5, ["bass", "pike", "eel", "salmon", "perch", "sturgeon"], "넓은 호수에는 큰 물고기가 숨어있다."),
-    Spot("sea", "바다", 8, ["bass", "eel", "salmon", "whale", "mackerel", "tuna", "octopus", "shark", "marlin", "perch"], "끝을 알 수 없는 바다. 강한 낚싯대가 필요하다."),
+    Spot("pond", "연못", 1, ["carp", "crucian", "bluegill", "tilapia", "trout", "koi"], "조용한 연못. 초보자에겐 딱 좋다."),
+    Spot("river", "강가", 3, ["carp", "trout", "catfish", "pike", "bluegill", "tilapia", "perch", "sturgeon", "zander", "piranha", "koi"], "흔드는 물에서 낚시를 도전해보자."),
+    Spot("lake", "호수", 5, ["bass", "pike", "eel", "salmon", "perch", "sturgeon", "zander"], "넓은 호수에는 큰 물고기가 숨어있다."),
+    Spot("sea", "바다", 8, ["bass", "eel", "salmon", "whale", "mackerel", "tuna", "octopus", "shark", "marlin", "perch", "red_snapper", "swordfish", "jellyfish"], "끝을 알 수 없는 바다. 강한 낚싯대가 필요하다."),
 ]
 
 ROD_DATA: List[Rod] = [
