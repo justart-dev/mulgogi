@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set
 
 from .data import (
+    ACHIEVEMENT_DATA,
     BAIT_BY_ID,
     FISH_BY_ID,
+    FISH_DATA,
     ROD_BY_ID,
     ROD_DATA,
     Fish,
@@ -38,6 +40,7 @@ class Player:
     gold: int = 100
     rod_id: str = "bamboo"
     bait_id: str = "worm"
+    title: str = ""
     unlocked_spots: List[str] = field(default_factory=lambda: ["pond"])
 
 
@@ -48,6 +51,9 @@ class Stats:
     total_weight: float = 0.0
     total_gold_earned: int = 0
     play_time_seconds: int = 0
+    night_catches: int = 0
+    legendary_catches: int = 0
+    epic_catches: int = 0
 
 
 @dataclass
@@ -77,7 +83,7 @@ class GameState:
     def exp_to_next(self) -> int:
         return self.player.level * 100
 
-    def record_catch(self, fish: Fish, weight: float):
+    def record_catch(self, fish: Fish, weight: float, time_of_day: str = "day"):
         fish_id = fish.id
         now = time.strftime("%Y-%m-%d %H:%M:%S")
         if fish_id not in self.collection:
@@ -88,6 +94,12 @@ class GameState:
 
         self.stats.total_caught += 1
         self.stats.total_weight += weight
+        if time_of_day == "night":
+            self.stats.night_catches += 1
+        if fish.rarity == 5:
+            self.stats.legendary_catches += 1
+        elif fish.rarity == 4:
+            self.stats.epic_catches += 1
 
         gold = int(fish.base_gold * weight)
         exp = int(fish.base_exp * weight)
@@ -100,28 +112,48 @@ class GameState:
         self.stats.total_gold_earned += gold
         leveled_up = self.add_exp(exp)
 
-        self._check_achievements()
-        return gold, exp, leveled_up
+        newly_unlocked = self._check_achievements()
+        return gold, exp, leveled_up, newly_unlocked
 
     def _check_achievements(self):
-        if self.stats.total_caught >= 1:
-            self.achievements.add("first_fish")
-        if self.stats.total_caught >= 10:
-            self.achievements.add("ten_fish")
-        if self.stats.total_caught >= 100:
-            self.achievements.add("hundred_fish")
-        if self.stats.total_weight >= 10:
-            self.achievements.add("heavy_haul")
-        if self.stats.total_weight >= 100:
-            self.achievements.add("ton_of_fish")
-        if self.player.gold >= 1000:
-            self.achievements.add("rich")
-        if len(self.collection) >= 5:
-            self.achievements.add("collector")
-        if len(self.collection) >= len(FISH_BY_ID):
-            self.achievements.add("master_collector")
-        if "whale" in self.collection:
-            self.achievements.add("whale_hunter")
+        newly_unlocked = []
+        for ach in ACHIEVEMENT_DATA.values():
+            if ach.id in self.achievements:
+                continue
+            if self._condition_met(ach.id):
+                self.achievements.add(ach.id)
+                self.player.gold += ach.reward_gold
+                self.stats.total_gold_earned += ach.reward_gold
+                self.add_exp(ach.reward_exp)
+                if ach.title:
+                    self.player.title = ach.title
+                newly_unlocked.append(ach)
+        return newly_unlocked
+
+    def _condition_met(self, ach_id: str) -> bool:
+        if ach_id == "first_fish":
+            return self.stats.total_caught >= 1
+        if ach_id == "ten_fish":
+            return self.stats.total_caught >= 10
+        if ach_id == "hundred_fish":
+            return self.stats.total_caught >= 100
+        if ach_id == "heavy_haul":
+            return self.stats.total_weight >= 10
+        if ach_id == "ton_of_fish":
+            return self.stats.total_weight >= 100
+        if ach_id == "rich":
+            return self.player.gold >= 1000
+        if ach_id == "collector":
+            return len(self.collection) >= 5
+        if ach_id == "master_collector":
+            return len(self.collection) >= len(FISH_DATA)
+        if ach_id == "whale_hunter":
+            return "whale" in self.collection
+        if ach_id == "night_owl":
+            return self.stats.night_catches >= 10
+        if ach_id == "legendary_catch":
+            return self.stats.legendary_catches >= 1
+        return False
 
     def unlock_spots(self):
         for spot_id in ["river", "lake", "sea"]:
@@ -196,3 +228,13 @@ def save_state(state: GameState):
         if tmp.exists():
             tmp.unlink()
         raise
+
+
+def save_screenshot(content: str) -> Path:
+    """ASCII 스크린샷을 파일로 저장하고 경로를 반환"""
+    screenshot_dir = SAVE_DIR / "screenshots"
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+    now = time.strftime("%Y%m%d_%H%M%S")
+    path = screenshot_dir / f"mulgogi_{now}.txt"
+    path.write_text(content, encoding="utf-8")
+    return path

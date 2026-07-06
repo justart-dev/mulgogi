@@ -11,6 +11,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Static
 
 from .data import (
+    ACHIEVEMENT_DATA,
     BAIT_BY_ID,
     BAIT_DATA,
     FISH_BY_ID,
@@ -23,7 +24,7 @@ from .data import (
     RARITY_STARS,
     Fish,
 )
-from .game import GameState, save_state
+from .game import GameState, save_state, save_screenshot
 
 
 def current_time_of_day() -> str:
@@ -121,20 +122,22 @@ class MainMenuScreen(Screen):
         ("1", "fish", "낚시"),
         ("2", "collection", "도감"),
         ("3", "shop", "상점"),
-        ("4", "stats", "통계"),
+        ("4", "achievements", "업적"),
+        ("5", "stats", "통계"),
         ("q", "quit", "종료"),
     ]
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Vertical(classes="menu"):
-            yield Static("mulgogi 🎣", classes="title")
+            yield Static("mulgogi", classes="title")
             yield Static("터미널에서 즐기는 낚시 게임", classes="subtitle")
             yield Static("")
             yield Button("1. 낚시하기", id="fish", variant="primary")
             yield Button("2. 도감", id="collection")
             yield Button("3. 상점", id="shop")
-            yield Button("4. 통계", id="stats")
+            yield Button("4. 업적", id="achievements")
+            yield Button("5. 통계", id="stats")
             yield Button("q. 종료", id="quit", variant="error")
         yield Footer()
 
@@ -146,6 +149,8 @@ class MainMenuScreen(Screen):
             self.app.push_screen(CollectionScreen(self.app.game_state))
         elif button_id == "shop":
             self.app.push_screen(ShopScreen(self.app.game_state))
+        elif button_id == "achievements":
+            self.app.push_screen(AchievementsScreen(self.app.game_state))
         elif button_id == "stats":
             self.app.push_screen(StatsScreen(self.app.game_state))
         elif button_id == "quit":
@@ -159,6 +164,9 @@ class MainMenuScreen(Screen):
 
     def action_shop(self):
         self.app.push_screen(ShopScreen(self.app.game_state))
+
+    def action_achievements(self):
+        self.app.push_screen(AchievementsScreen(self.app.game_state))
 
     def action_stats(self):
         self.app.push_screen(StatsScreen(self.app.game_state))
@@ -190,6 +198,7 @@ class FishingScreen(Screen):
         self.reel_dir = 1
         self.reel_speed = 0.06
         self.last_result = None
+        self.last_catch = None
         self.weather = current_weather()
         self.time_of_day = current_time_of_day()
 
@@ -213,7 +222,8 @@ class FishingScreen(Screen):
         p = self.state.player
         rod = self.state.current_rod()
         bait = self.state.current_bait()
-        return f"Lv.{p.level}  골드:{p.gold}  낚싯대:{rod.name}  미끼:{bait.name if bait else '-'}"
+        title_tag = f"[{p.title}] " if p.title else ""
+        return f"{title_tag}Lv.{p.level}  골드:{p.gold}  낚싯대:{rod.name}  미끼:{bait.name if bait else '-'}"
 
     def _spot_text(self) -> str:
         spot = SPOT_BY_ID[self.spot_id]
@@ -243,6 +253,8 @@ class FishingScreen(Screen):
         elif self.phase == "result":
             if key == "space":
                 self.reset()
+            elif key in ("s", "S"):
+                self.save_screenshot()
 
     def start_cast(self):
         self.phase = "waiting"
@@ -348,15 +360,32 @@ class FishingScreen(Screen):
         self.phase = "result"
         fish = self._pick_fish()
         weight = round(random.uniform(fish.min_weight, fish.max_weight), 2)
-        gold, exp, leveled_up = self.state.record_catch(fish, weight)
+        gold, exp, leveled_up, new_achievements = self.state.record_catch(
+            fish, weight, self.time_of_day
+        )
         self.state.unlock_spots()
         save_state(self.state)
 
         level_text = " [bold yellow]★ 레벨업![/]" if leveled_up else ""
+        ach_text = ""
+        if new_achievements:
+            names = ", ".join(a.name for a in new_achievements)
+            titles = [a.title for a in new_achievements if a.title]
+            title_text = f"\n칭호: {', '.join(titles)}" if titles else ""
+            ach_text = f"\n[bold magenta]★ 업적 달성: {names}{title_text}[/]"
+
+        self.last_catch = {
+            "fish": fish,
+            "weight": weight,
+            "gold": gold,
+            "exp": exp,
+            "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
         self.query_one("#status", Static).update(self._status_text())
-        self.query_one("#help", Static).update("Space를 눌러 계속")
+        self.query_one("#help", Static).update("Space: 계속  |  S: 스크린샷 저장  |  Esc: 뒤로")
         self.query_one("#result", Static).update(
-            f"[green]{fish.name}을(를) 잡았다![/]{level_text}\n\n"
+            f"[green]{fish.name}을(를) 잡았다![/]{level_text}{ach_text}\n\n"
             f"{fish.ascii}\n\n"
             f"무게: {weight}kg  |  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\\n"
             f"골드 +{gold}  경험치 +{exp}\n"
@@ -364,9 +393,33 @@ class FishingScreen(Screen):
 
     def lose_fish(self):
         self.phase = "result"
-        self.query_one("#help", Static).update("Space를 눌러 계속")
+        self.query_one("#help", Static).update("Space: 계속  |  Esc: 뒤로")
         self.query_one("#result", Static).update("[red]물고기가 도망갔다... 다시 도전해보자.[/]")
         save_state(self.state)
+
+    def save_screenshot(self):
+        if not self.last_catch:
+            return
+        info = self.last_catch
+        fish = info["fish"]
+        lines = [
+            "╔" + "═" * 38 + "╗",
+            "║" + " mulgogi 터미널 낚시 기록 ".center(38) + "║",
+            "╠" + "═" * 38 + "╣",
+        ]
+        for raw in fish.ascii.splitlines():
+            lines.append("║" + raw.center(38) + "║")
+        lines.extend([
+            "╠" + "═" * 38 + "╣",
+            f"║ {fish.name} ({RARITY_NAMES[fish.rarity]})".ljust(39) + "║",
+            f"║ 무게: {info['weight']}kg".ljust(39) + "║",
+            f"║ 골드 +{info['gold']}  경험치 +{info['exp']}".ljust(39) + "║",
+            f"║ {info['time']}".ljust(39) + "║",
+            "╚" + "═" * 38 + "╝",
+        ])
+        content = "\n".join(lines)
+        path = save_screenshot(content)
+        self.query_one("#help", Static).update(f"스크린샷 저장: {path}")
 
     def reset(self):
         self.phase = "menu"
@@ -394,7 +447,7 @@ class CollectionScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Vertical(classes="collection"):
-            yield Static("도감 📜", classes="title")
+            yield Static("도감", classes="title")
             yield Static(f"총 {len(FISH_DATA)}종 중 {len(self.state.collection)}종 잡음", id="count")
             yield Static("")
             fish_lines = []
@@ -427,7 +480,7 @@ class ShopScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Vertical(classes="shop"):
-            yield Static("상점 🛒", classes="title")
+            yield Static("상점", classes="title")
             yield Static(f"보유 골드: {self.state.player.gold}", id="gold")
             yield Static("")
             yield Static("[낚싯대]", classes="section")
@@ -523,10 +576,12 @@ class StatsScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Vertical(classes="stats"):
-            yield Static("통계 📊", classes="title")
+            yield Static("통계", classes="title")
             s = self.state.stats
             p = self.state.player
+            active_title = p.title or "없음"
             text = (
+                f"칭호: {active_title}\n"
                 f"레벨: {p.level}\n"
                 f"경험치: {p.exp} / {self.state.exp_to_next()}\n"
                 f"보유 골드: {p.gold}\n"
@@ -534,19 +589,75 @@ class StatsScreen(Screen):
                 f"총 잡은 마리수: {s.total_caught}\n"
                 f"총 잡은 무게: {s.total_weight:.2f}kg\n"
                 f"총 번 골드: {s.total_gold_earned}\n"
+                f"밤 낚시 횟수: {s.night_catches}\n"
+                f"Epic 잡은 횟수: {s.epic_catches}  Legendary 잡은 횟수: {s.legendary_catches}\n"
                 f"시작일: {self.state.started_at}\n"
             )
             yield Static(text, id="stats-text")
             yield Static("")
-            yield Static("[업적]", classes="section")
-            if self.state.achievements:
-                ach_text = "\n".join(sorted(self.state.achievements))
+            yield Static("Esc 또는 q: 뒤로", id="help")
+        yield Footer()
+
+    def action_back(self):
+        self.app.pop_screen()
+
+
+class AchievementsScreen(Screen):
+    BINDINGS = [
+        ("escape", "back", "뒤로"),
+        ("q", "back", "뒤로"),
+    ]
+
+    def __init__(self, state: GameState, **kwargs):
+        super().__init__(**kwargs)
+        self.state = state
+        self._title_buttons: dict[str, str] = {}
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=True)
+        with Vertical(classes="achievements"):
+            yield Static("업적", classes="title")
+            active = self.state.player.title or "없음"
+            yield Static(f"장착 칭호: {active}", id="active-title")
+            yield Static("")
+            yield Static("[업적 목록]", classes="section")
+            for ach in ACHIEVEMENT_DATA.values():
+                unlocked = ach.id in self.state.achievements
+                mark = "[green]✓[/]" if unlocked else "[dim]-[/]"
+                title_part = f" / 칭호: {ach.title}" if ach.title else ""
+                line = f"{mark} {ach.name} - {ach.description} (보상: {ach.reward_gold}G, {ach.reward_exp}XP){title_part}"
+                if not unlocked:
+                    line = f"[dim]{line}[/]"
+                yield Static(line)
+            yield Static("")
+            yield Static("[칭호]", classes="section")
+            unlocked_titles = [
+                ach.title for ach in ACHIEVEMENT_DATA.values()
+                if ach.title and ach.id in self.state.achievements
+            ]
+            if unlocked_titles:
+                for idx, title in enumerate(unlocked_titles):
+                    variant = "success" if title == self.state.player.title else "primary"
+                    btn = Button(title, id=f"title-{idx}", variant=variant)
+                    self._title_buttons[f"title-{idx}"] = title
+                    yield btn
             else:
-                ach_text = "아직 달성한 업적이 없습니다."
-            yield Static(ach_text, id="achievements")
+                yield Static("아직 해금된 칭호가 없습니다.")
             yield Static("")
             yield Static("Esc 또는 q: 뒤로", id="help")
         yield Footer()
+
+    def on_button_pressed(self, event):
+        button_id = event.button.id
+        if button_id and button_id.startswith("title-"):
+            title = self._title_buttons.get(button_id)
+            if title:
+                self.state.player.title = title
+                save_state(self.state)
+                self.query_one("#active-title", Static).update(f"장착 칭호: {title}")
+                for bid, t in self._title_buttons.items():
+                    btn = self.query_one(f"#{bid}", Button)
+                    btn.variant = "success" if t == title else "primary"
 
     def action_back(self):
         self.app.pop_screen()
@@ -565,7 +676,7 @@ class SpotSelectScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Vertical(classes="spots"):
-            yield Static("낚시터 선택 🌊", classes="title")
+            yield Static("낚시터 선택", classes="title")
             yield Static("원하는 낚시터를 선택하세요.")
             yield Static("")
             for spot in SPOT_DATA:
