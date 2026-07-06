@@ -30,6 +30,7 @@ from .data import (
 )
 from .game import GameState, save_state, save_screenshot
 from .particles import ParticleEmitter, ParticleOverlay
+from .pixel_art import fish_sprite
 
 
 def current_time_of_day() -> str:
@@ -477,7 +478,7 @@ class FishingScreen(Screen):
             (" ★ 레벨업!", "bold yellow") if leveled_up else ("", ""),
             (f"\n★ 업적 달성: {names}{title_text}", "bold magenta") if new_achievements else ("", ""),
             "\n\n",
-            fish.ascii,
+            fish_sprite(fish.id),
             "\n\n",
             f"무게: {weight}kg  |  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\n",
             f"골드 +{gold}  경험치 +{exp}\n",
