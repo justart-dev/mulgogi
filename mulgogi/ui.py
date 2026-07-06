@@ -94,14 +94,26 @@ class AngleWidget(Static):
 
 class ReelWidget(Static):
     position = reactive(0.0)
+    target_range = reactive(0.2)
 
     def render(self):
         bar_width = 30
-        pos = int(self.position * bar_width)
+        pos = int(self.position * (bar_width - 1))
         pos = max(0, min(bar_width - 1, pos))
-        bar = ["-"] * bar_width
-        bar[pos] = "O"
-        return f"타이밍! Space를 눌러 멈추세요\n[{''.join(bar)}]"
+        center = bar_width // 2
+        half = max(1, int(self.target_range * bar_width / 2))
+        bar = []
+        for i in range(bar_width):
+            if i == pos:
+                bar.append("[bold white]O[/]")
+            elif center - half <= i <= center + half:
+                bar.append("[green]=[/]")
+            else:
+                bar.append("[dim]-[/]")
+        return (
+            "Space로 O를 [green]초록색 구간[/]에 맞출 때 멈춰라\n"
+            f"[{''.join(bar)}]"
+        )
 
 
 class MainMenuScreen(Screen):
@@ -263,7 +275,13 @@ class FishingScreen(Screen):
     def start_reel(self):
         self._stop_all_timers()
         self.phase = "reeling"
-        self.query_one("#help", Static).update("[bold cyan]릴을 감는 중... Space로 멈추세요![/]")
+        rod = self.state.current_rod()
+        success_range = 0.2 + rod.reel_bonus
+        self.query_one("#help", Static).update(
+            "[bold cyan]챔질! Space로 O를 초록색 구간에 멈춰라.[/]"
+        )
+        reel = self.query_one("#reel", ReelWidget)
+        reel.target_range = success_range
         self.reel_pos = 0.0
         self.reel_dir = 1
         self.reel_speed = random.uniform(0.04, 0.10)
