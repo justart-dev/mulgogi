@@ -199,8 +199,29 @@ class MainMenuScreen(Screen):
             yield Button("5. 통계", id="stats")
             yield Button("q. 종료", id="quit", variant="error")
             yield PlainStatic("")
-            yield PlainStatic("숫자 또는 엔터/클릭으로 선택  |  q: 종료", classes="help")
+            yield PlainStatic("방향키 또는 숫자/엔터/클릭으로 선택  |  q: 종료", classes="help")
         yield Footer()
+
+    def on_mount(self):
+        self.query_one("#fish", Button).focus()
+
+    def on_key(self, event):
+        buttons = list(self.query(Button))
+        if not buttons:
+            return
+        current = self.app.focused
+        try:
+            idx = buttons.index(current)
+        except ValueError:
+            idx = 0
+        if event.key == "down":
+            idx = (idx + 1) % len(buttons)
+            buttons[idx].focus()
+            event.stop()
+        elif event.key == "up":
+            idx = (idx - 1) % len(buttons)
+            buttons[idx].focus()
+            event.stop()
 
     def on_button_pressed(self, event):
         button_id = event.button.id
