@@ -29,6 +29,7 @@ from .data import (
     Fish,
 )
 from .game import GameState, save_state, save_screenshot
+from .particles import ParticleEmitter, ParticleOverlay
 
 
 def current_time_of_day() -> str:
@@ -47,14 +48,48 @@ def current_weather() -> str:
     return random.choice(["sunny", "cloudy", "rainy"])
 
 
+def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    h = hex_color.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def _rgb_to_hex(r: int, g: int, b: int) -> str:
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def gradient_text(text: str, colors: list[str], bold: bool = True) -> Text:
+    """Render text with a horizontal color gradient."""
+    if not text:
+        return Text("")
+    rgb_colors = [_hex_to_rgb(c) for c in colors]
+    result = Text()
+    for i, char in enumerate(text):
+        t = i / max(len(text) - 1, 1)
+        # pick segment and local position
+        segment = t * (len(rgb_colors) - 1)
+        idx = int(segment)
+        local_t = segment - idx
+        c1 = rgb_colors[min(idx, len(rgb_colors) - 1)]
+        c2 = rgb_colors[min(idx + 1, len(rgb_colors) - 1)]
+        r = int(c1[0] + (c2[0] - c1[0]) * local_t)
+        g = int(c1[1] + (c2[1] - c1[1]) * local_t)
+        b = int(c1[2] + (c2[2] - c1[2]) * local_t)
+        style = _rgb_to_hex(r, g, b)
+        if bold:
+            style = f"bold {style}"
+        result.append_text(Text(char, style=style))
+    return result
+
+
 class PlainStatic(Static):
     """Rich 마크업을 파싱하지 않는 Static. 사용자 데이터나 괄호가 포함된 텍스트에 안전."""
 
     def __init__(self, content: RenderableType = "", *, markup=False, **kwargs):
         super().__init__(content, markup=markup, **kwargs)
 
-    def update(self, content: RenderableType, *, markup=False):
-        return super().update(content, markup=markup)
+    def update(self, content: RenderableType = "", *, markup=False):
+        # Always keep markup disabled regardless of caller; parent uses self._render_markup.
+        return super().update(content)
 
 
 class SplashWidget(Static):
@@ -154,8 +189,8 @@ class MainMenuScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Vertical(classes="menu"):
-            yield PlainStatic("mulgogi", classes="title")
-            yield PlainStatic("터미널에서 즐기는 낚시 게임", classes="subtitle")
+            yield PlainStatic(gradient_text("mulgogi", ["#ff79c6", "#bd93f9", "#8be9fd"]), classes="title")
+            yield PlainStatic(gradient_text("터미널에서 즐기는 낚시 게임", ["#50fa7b", "#f1fa8c"]), classes="subtitle")
             yield PlainStatic("")
             yield Button("1. 낚시하기", id="fish", variant="primary")
             yield Button("2. 도감", id="collection")
@@ -163,6 +198,8 @@ class MainMenuScreen(Screen):
             yield Button("4. 업적", id="achievements")
             yield Button("5. 통계", id="stats")
             yield Button("q. 종료", id="quit", variant="error")
+            yield PlainStatic("")
+            yield PlainStatic("숫자 또는 엔터/클릭으로 선택  |  q: 종료", classes="help")
         yield Footer()
 
     def on_button_pressed(self, event):
@@ -205,11 +242,6 @@ class FishingScreen(Screen):
         ("q", "back", "뒤로"),
     ]
 
-    CSS = """
-    FishingScreen { align: center middle; }
-    #fishing-main { width: 80; height: auto; border: solid green; padding: 1 2; }
-    """
-
     def __init__(self, state: GameState, spot_id: str = "pond", **kwargs):
         super().__init__(**kwargs)
         self.state = state
@@ -236,6 +268,7 @@ class FishingScreen(Screen):
             yield ReelWidget(id="reel")
             yield PlainStatic("", id="result")
             yield Static("← →: 각도  |  Space: 캐스트/입질/릴  |  Esc: 뒤로", id="help")
+            yield ParticleOverlay(id="particles")
         yield Footer()
 
     def on_mount(self):
@@ -419,6 +452,7 @@ class FishingScreen(Screen):
             f"골드 +{gold}  경험치 +{exp}\n",
         )
         self.query_one("#result", PlainStatic).update(result_text)
+        self.query_one("#particles", ParticleOverlay).burst()
 
     def lose_fish(self):
         self.phase = "result"
@@ -455,6 +489,7 @@ class FishingScreen(Screen):
         self.query_one("#angle", AngleWidget).display = True
         self.query_one("#splash", SplashWidget).display = False
         self.query_one("#reel", ReelWidget).display = False
+        self.query_one("#particles", ParticleOverlay).clear()
         self.query_one("#help", Static).update("← →: 각도 조절  |  Space: 캐스트/입질/릴  |  Esc: 뒤로")
         self.query_one("#result", PlainStatic).update("")
 
