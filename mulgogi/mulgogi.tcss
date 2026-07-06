@@ -51,7 +51,7 @@ Static {
 .title {
     text-style: bold;
     text-align: center;
-    color: #ff79c6;
+    color: #f8f8f2;
 }
 
 .subtitle {
@@ -69,7 +69,7 @@ Static {
 }
 
 .menu {
-    width: 60;
+    width: 64;
     height: auto;
     border: round #50fa7b;
     background: #44475a;
