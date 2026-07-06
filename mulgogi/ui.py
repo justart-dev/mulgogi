@@ -9,7 +9,7 @@ from rich.console import RenderableType
 from rich.text import Text
 
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Static
@@ -30,7 +30,7 @@ from .data import (
 )
 from .game import GameState, save_state, save_screenshot
 from .particles import ParticleEmitter, ParticleOverlay
-from .pixel_art import fish_sprite
+from .pixel_art import fish_icon, fish_sprite
 
 
 def current_time_of_day() -> str:
@@ -546,21 +546,24 @@ class CollectionScreen(Screen):
             yield PlainStatic("도감", classes="title")
             yield PlainStatic(f"총 {len(FISH_DATA)}종 중 {len(self.state.collection)}종 잡음", id="count")
             yield PlainStatic("")
-            fish_lines = []
-            for fish in FISH_DATA:
-                rec = self.state.collection.get(fish.id)
-                if rec:
-                    line = Text.assemble(
-                        ("✓", "green"),
-                        f" {fish.name}  {RARITY_STARS[fish.rarity]}  최대 {rec.max_weight}kg  x{rec.count}",
-                    )
-                else:
-                    line = Text.assemble(
-                        ("? ? ?", "dim"),
-                        f"  {RARITY_STARS[fish.rarity]}  ???",
-                    )
-                fish_lines.append(line)
-            yield PlainStatic(Text("\n").join(fish_lines), id="fish-list")
+            with VerticalScroll(id="fish-list"):
+                for fish in FISH_DATA:
+                    rec = self.state.collection.get(fish.id)
+                    caught = rec is not None
+                    icon = fish_icon(fish.id, caught=caught)
+                    if caught:
+                        info = Text.assemble(
+                            (fish.name, "bold #f0f0f0"),
+                            f"  {RARITY_STARS[fish.rarity]}  최대 {rec.max_weight}kg  x{rec.count}",
+                        )
+                    else:
+                        info = Text.assemble(
+                            ("? ? ?", "dim"),
+                            f"  {RARITY_STARS[fish.rarity]}  ???",
+                        )
+                    with Horizontal(classes="fish-row"):
+                        yield PlainStatic(icon, classes="fish-icon")
+                        yield PlainStatic(info, classes="fish-info")
             yield PlainStatic("")
             yield PlainStatic("Esc 또는 q: 뒤로", id="help")
         yield Footer()
@@ -585,7 +588,7 @@ class ShopScreen(Screen):
             yield PlainStatic("상점", classes="title")
             yield PlainStatic(f"보유 골드: {self.state.player.gold}", id="gold")
             yield PlainStatic("")
-            yield Static("[bold]낚싯대[/bold]", classes="section")
+            yield PlainStatic("남싯대", classes="section")
             for rod in ROD_DATA:
                 owned = rod.id == self.state.player.rod_id
                 status = "(소유 중)" if owned else f"{rod.price} 골드"
@@ -593,7 +596,7 @@ class ShopScreen(Screen):
                 btn.description = rod.description
                 yield btn
             yield PlainStatic("")
-            yield Static("[bold]미끼[/bold]", classes="section")
+            yield PlainStatic("미끼", classes="section")
             for bait in BAIT_DATA:
                 owned = bait.id == self.state.player.bait_id
                 status = "(장비 중)" if owned else f"{bait.price} 골드"
@@ -722,7 +725,7 @@ class AchievementsScreen(Screen):
             active = self.state.player.title or "없음"
             yield PlainStatic(f"장착 칭호: {active}", id="active-title")
             yield PlainStatic("")
-            yield Static("[bold]업적 목록[/bold]", classes="section")
+            yield PlainStatic("업적 목록", classes="section")
             for ach in ACHIEVEMENT_DATA.values():
                 unlocked = ach.id in self.state.achievements
                 mark = Text("✓", style="green") if unlocked else Text("-", style="dim")
@@ -735,7 +738,7 @@ class AchievementsScreen(Screen):
                     line.stylize("dim")
                 yield PlainStatic(line)
             yield PlainStatic("")
-            yield Static("[bold]칭호[/bold]", classes="section")
+            yield PlainStatic("칭호", classes="section")
             unlocked_titles = [
                 ach.title for ach in ACHIEVEMENT_DATA.values()
                 if ach.title and ach.id in self.state.achievements

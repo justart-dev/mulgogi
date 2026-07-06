@@ -132,6 +132,27 @@ Static {
     padding: 1 2;
 }
 
+#fish-list {
+    height: 30;
+    border: none;
+    background: transparent;
+}
+
+.fish-row {
+    height: auto;
+    align: center middle;
+}
+
+.fish-icon {
+    width: 14;
+    text-align: center;
+}
+
+.fish-info {
+    width: 1fr;
+    text-align: left;
+}
+
 #fishing-main {
     width: 80;
     height: auto;
