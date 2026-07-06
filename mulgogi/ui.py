@@ -198,8 +198,9 @@ class MainMenuScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Vertical(classes="menu"):
+            yield PlainStatic(Text.assemble(("~$ ", "#33d9b2"), ("mulgogi", "#f0f0f0")), classes="prompt")
             yield PlainStatic(MULGOGI_ASCII, classes="title")
-            yield PlainStatic(gradient_text("터미널에서 즐기는 낚시 게임", ["#50fa7b", "#f1fa8c"]), classes="subtitle")
+            yield PlainStatic(gradient_text("터미널에서 즐기는 낚시 게임", ["#33d9b2", "#f1fa8c"]), classes="subtitle")
             yield PlainStatic("")
             yield Button("1. 낚시하기", id="fish", variant="primary")
             yield Button("2. 도감", id="collection")

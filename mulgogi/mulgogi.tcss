@@ -1,47 +1,58 @@
-/* mulgogi terminal UI theme inspired by gittype/dracula */
+/* mulgogi terminal UI theme — charcoal + mint */
 
 * {
-    color: #f8f8f2;
+    color: #f0f0f0;
     background: transparent;
 }
 
 Screen {
     align: center middle;
-    background: #282a36;
+    background: #1e1e1e;
 }
 
 Header, Footer {
-    background: #44475a;
-    color: #f8f8f2;
+    background: #262626;
+    color: #33d9b2;
 }
 
 Button {
     width: 100%;
-    background: #44475a;
-    color: #f8f8f2;
-    border: solid #6272a4;
+    background: #262626;
+    color: #f0f0f0;
+    border: solid #33d9b2;
 }
 
 Button:focus {
-    background: #6272a4;
+    background: #33d9b2;
+    color: #1e1e1e;
 }
 
 Button.-primary {
-    background: #50fa7b;
-    color: #282a36;
-    border: solid #50fa7b;
+    background: #33d9b2;
+    color: #1e1e1e;
+    border: solid #33d9b2;
+}
+
+Button.-primary:focus {
+    background: #2bcba3;
+    color: #1e1e1e;
 }
 
 Button.-error {
-    background: #ff5555;
-    color: #f8f8f2;
-    border: solid #ff5555;
+    background: #ff6b6b;
+    color: #1e1e1e;
+    border: solid #ff6b6b;
+}
+
+Button.-error:focus {
+    background: #ff5252;
+    color: #1e1e1e;
 }
 
 Button:disabled {
-    background: #44475a;
-    color: #6272a4;
-    border: solid #6272a4;
+    background: #262626;
+    color: #555555;
+    border: solid #444444;
 }
 
 Static {
@@ -51,76 +62,81 @@ Static {
 .title {
     text-style: bold;
     text-align: center;
-    color: #f8f8f2;
+    color: #f0f0f0;
 }
 
 .subtitle {
     text-align: center;
-    color: #bd93f9;
+    color: #33d9b2;
 }
 
 .section {
     text-style: bold;
-    color: #8be9fd;
+    color: #33d9b2;
 }
 
 .help {
-    color: #6272a4;
+    color: #6e7d8c;
+}
+
+.prompt {
+    text-align: left;
+    color: #6e7d8c;
 }
 
 .menu {
     width: 64;
     height: auto;
-    border: round #50fa7b;
-    background: #44475a;
+    border: solid #33d9b2;
+    background: #262626;
     padding: 1 2;
 }
 
 .collection {
     width: 80;
     height: auto;
-    border: round #8be9fd;
-    background: #44475a;
+    border: solid #33d9b2;
+    background: #262626;
     padding: 1 2;
 }
 
 .shop {
     width: 70;
     height: auto;
-    border: round #f1fa8c;
-    background: #44475a;
+    border: solid #33d9b2;
+    background: #262626;
     padding: 1 2;
 }
 
 .stats {
     width: 60;
     height: auto;
-    border: round #bd93f9;
-    background: #44475a;
+    border: solid #33d9b2;
+    background: #262626;
     padding: 1 2;
 }
 
 .spots {
     width: 70;
     height: auto;
-    border: round #8be9fd;
-    background: #44475a;
+    border: solid #33d9b2;
+    background: #262626;
     padding: 1 2;
 }
 
 .achievements {
     width: 70;
     height: auto;
-    border: round #ff79c6;
-    background: #44475a;
+    border: solid #33d9b2;
+    background: #262626;
     padding: 1 2;
 }
 
 #fishing-main {
     width: 80;
     height: auto;
-    border: round #50fa7b;
-    background: #44475a;
+    border: solid #33d9b2;
+    background: #262626;
     padding: 1 2;
 }
 
@@ -131,11 +147,11 @@ Static {
 
 #spot-info {
     text-align: left;
-    color: #8be9fd;
+    color: #33d9b2;
 }
 
 #help {
-    color: #6272a4;
+    color: #6e7d8c;
 }
 
 #result {
