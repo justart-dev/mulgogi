@@ -417,7 +417,7 @@ class ShopScreen(Screen):
                 owned = rod.id == self.state.player.rod_id
                 status = "[소유 중]" if owned else f"{rod.price} 골드"
                 btn = Button(f"{rod.name} - {status}", id=f"rod-{rod.id}", disabled=owned)
-                btn.tooltip = rod.description
+                btn.description = rod.description
                 yield btn
             yield Static("")
             yield Static("[미끼]", classes="section")
@@ -425,11 +425,37 @@ class ShopScreen(Screen):
                 owned = bait.id == self.state.player.bait_id
                 status = "[장비 중]" if owned else f"{bait.price} 골드"
                 btn = Button(f"{bait.name} - {status}", id=f"bait-{bait.id}", disabled=owned)
-                btn.tooltip = bait.description
+                btn.description = bait.description
                 yield btn
             yield Static("")
+            yield Static("", id="desc")
             yield Static("Esc 또는 q: 뒤로", id="help")
         yield Footer()
+
+    def _find_button(self, widget):
+        while widget and not isinstance(widget, Button):
+            widget = widget.parent
+        return widget
+
+    def _update_desc(self, widget):
+        btn = self._find_button(widget)
+        desc = self.query_one("#desc", Static)
+        if btn and hasattr(btn, "description"):
+            desc.update(btn.description)
+        else:
+            desc.update("")
+
+    def on_mouse_enter(self, event):
+        self._update_desc(event.control)
+
+    def on_mouse_leave(self, event):
+        self._update_desc(event.control)
+
+    def on_focus(self, event):
+        self._update_desc(event.control)
+
+    def on_blur(self, event):
+        self._update_desc(event.control)
 
     def on_button_pressed(self, event):
         button_id = event.button.id
@@ -532,11 +558,37 @@ class SpotSelectScreen(Screen):
                     id=f"spot-{spot.id}",
                     disabled=not unlocked,
                 )
-                btn.tooltip = spot.description
+                btn.description = spot.description
                 yield btn
             yield Static("")
+            yield Static("", id="desc")
             yield Static("Esc 또는 q: 뒤로", id="help")
         yield Footer()
+
+    def _find_button(self, widget):
+        while widget and not isinstance(widget, Button):
+            widget = widget.parent
+        return widget
+
+    def _update_desc(self, widget):
+        btn = self._find_button(widget)
+        desc = self.query_one("#desc", Static)
+        if btn and hasattr(btn, "description"):
+            desc.update(btn.description)
+        else:
+            desc.update("")
+
+    def on_mouse_enter(self, event):
+        self._update_desc(event.control)
+
+    def on_mouse_leave(self, event):
+        self._update_desc(event.control)
+
+    def on_focus(self, event):
+        self._update_desc(event.control)
+
+    def on_blur(self, event):
+        self._update_desc(event.control)
 
     def on_button_pressed(self, event):
         button_id = event.button.id

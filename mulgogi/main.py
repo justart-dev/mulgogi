@@ -40,7 +40,7 @@ class MulgogiApp(App):
 
 def main():
     parser = argparse.ArgumentParser(prog="mulgogi", description="A fishing game in your terminal")
-    parser.add_argument("--version", action="version", version="%(prog)s 0.2.2")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.2.3")
     parser.parse_args()
     app = MulgogiApp()
     app.run()
