@@ -1,3 +1,7 @@
 """mulgogi - A fishing game in your terminal."""
 
-__version__ = "0.4.2"
+try:
+    from importlib.metadata import version
+    __version__ = version("mulgogi")
+except Exception:
+    __version__ = "0.4.4"
