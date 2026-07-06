@@ -5,10 +5,10 @@ import time
 from datetime import datetime
 
 from textual.app import ComposeResult
-from textual.containers import Center, Horizontal, Vertical
+from textual.containers import Vertical
 from textual.reactive import reactive
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Header, ListItem, ListView, Static
+from textual.widgets import Button, Footer, Header, Static
 
 from .data import (
     BAIT_BY_ID,
@@ -261,14 +261,21 @@ class FishingScreen(Screen):
         save_state(self.state)
 
     def start_reel(self):
-        if self.bite_timer:
-            self.bite_timer.stop()
+        self._stop_all_timers()
         self.phase = "reeling"
         self.query_one("#help", Static).update("[bold cyan]릴을 감는 중... Space로 멈추세요![/]")
         self.reel_pos = 0.0
         self.reel_dir = 1
         self.reel_speed = random.uniform(0.04, 0.10)
         self.reel_timer = self.set_interval(0.05, self.update_reel)
+
+    def _stop_all_timers(self):
+        if self.bite_timer:
+            self.bite_timer.stop()
+            self.bite_timer = None
+        if self.reel_timer:
+            self.reel_timer.stop()
+            self.reel_timer = None
 
     def update_reel(self):
         self.reel_pos += self.reel_dir * self.reel_speed
@@ -283,8 +290,7 @@ class FishingScreen(Screen):
         widget.display = True
 
     def stop_reel(self):
-        if self.reel_timer:
-            self.reel_timer.stop()
+        self._stop_all_timers()
         self.query_one("#reel", ReelWidget).display = False
         self.query_one("#splash", SplashWidget).stop()
         self.query_one("#splash", SplashWidget).display = False
@@ -296,6 +302,12 @@ class FishingScreen(Screen):
             self.catch_fish()
         else:
             self.lose_fish()
+
+    def action_back(self):
+        self._stop_all_timers()
+        self.query_one("#splash", SplashWidget).stop()
+        save_state(self.state)
+        self.app.pop_screen()
 
     def _pick_fish(self) -> Fish:
         spot = SPOT_BY_ID[self.spot_id]
@@ -328,7 +340,7 @@ class FishingScreen(Screen):
         self.query_one("#result", Static).update(
             f"[green]{fish.name}을(를) 잡았다![/]{level_text}\n\n"
             f"{fish.ascii}\n\n"
-            f"무게: {weight}kg  |  희밉도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\n"
+            f"무게: {weight}kg  |  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\\n"
             f"골드 +{gold}  경험치 +{exp}\n"
         )
 

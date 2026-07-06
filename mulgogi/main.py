@@ -1,9 +1,8 @@
 import argparse
 
-from textual.app import App, ComposeResult
-from textual.widgets import Footer, Header, Static
+from textual.app import App
 
-from .game import GameState, load_state
+from .game import load_state
 from .ui import (
     CollectionScreen,
     FishingScreen,
@@ -41,7 +40,7 @@ class MulgogiApp(App):
 
 def main():
     parser = argparse.ArgumentParser(prog="mulgogi", description="A fishing game in your terminal")
-    parser.add_argument("--version", action="version", version="%(prog)s 0.2.1")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.2.2")
     parser.parse_args()
     app = MulgogiApp()
     app.run()

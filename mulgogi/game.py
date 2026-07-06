@@ -187,5 +187,12 @@ def load_state() -> GameState:
 
 def save_state(state: GameState):
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
-    with SAVE_FILE.open("w", encoding="utf-8") as f:
-        json.dump(state.to_dict(), f, ensure_ascii=False, indent=2)
+    tmp = SAVE_FILE.with_suffix(".json.tmp")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(state.to_dict(), f, ensure_ascii=False, indent=2)
+        tmp.replace(SAVE_FILE)
+    except Exception:
+        if tmp.exists():
+            tmp.unlink()
+        raise
