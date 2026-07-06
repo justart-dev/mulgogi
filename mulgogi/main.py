@@ -2,6 +2,7 @@ import argparse
 
 from textual.app import App
 
+from . import __version__
 from .game import load_state
 from .ui import (
     CollectionScreen,
@@ -28,7 +29,7 @@ class MulgogiApp(App):
 
 def main():
     parser = argparse.ArgumentParser(prog="mulgogi", description="A fishing game in your terminal")
-    parser.add_argument("--version", action="version", version="%(prog)s 0.4.2")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.parse_args()
     app = MulgogiApp()
     app.run()
