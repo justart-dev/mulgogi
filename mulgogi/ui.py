@@ -316,7 +316,7 @@ class FishingScreen(Screen):
     def start_cast(self):
         self.phase = "waiting"
         self.state.stats.total_casts += 1
-        self.query_one("#status", Static).update(self._status_text(), markup=False)
+        self.query_one("#status", Static).update(self._status_text())
         self.query_one("#help", Static).update("물고기가 물기를 기다리는 중...  Space: 입질 시도")
         self.query_one("#angle", AngleWidget).display = False
         self.query_one("#splash", SplashWidget).display = True
@@ -439,7 +439,7 @@ class FishingScreen(Screen):
             "time": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
-        self.query_one("#status", Static).update(self._status_text(), markup=False)
+        self.query_one("#status", Static).update(self._status_text())
         self.query_one("#help", Static).update("Space: 계속  |  S: 스크린샷 저장  |  Esc: 뒤로")
         result_text = Text.assemble(
             (f"{fish.name}을(를) 잡았다!", "green"),
@@ -482,7 +482,7 @@ class FishingScreen(Screen):
         ])
         content = "\n".join(lines)
         path = save_screenshot(content)
-        self.query_one("#help", Static).update(f"스크린샷 저장: {path}", markup=False)
+        self.query_one("#help", Static).update(f"스크린샷 저장: {path}")
 
     def reset(self):
         self.phase = "menu"
@@ -776,7 +776,7 @@ class SpotSelectScreen(Screen):
         btn = self._find_button(widget)
         desc = self.query_one("#desc", Static)
         if btn and hasattr(btn, "description"):
-            desc.update(btn.description, markup=False)
+            desc.update(btn.description)
         else:
             desc.update("")
 
