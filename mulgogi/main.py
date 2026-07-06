@@ -31,28 +31,17 @@ class MulgogiApp(App):
     Button { width: 100%; }
     """
 
-    SCREENS = {
-        "main": MainMenuScreen,
-        "spots": lambda: SpotSelectScreen(App.game_state),
-        "fishing": lambda spot_id="pond": FishingScreen(App.game_state, spot_id),
-        "collection": lambda: CollectionScreen(App.game_state),
-        "shop": lambda: ShopScreen(App.game_state),
-        "stats": lambda: StatsScreen(App.game_state),
-    }
-
-    game_state = None
-
     def __init__(self):
         super().__init__()
-        MulgogiApp.game_state = load_state()
+        self.game_state = load_state()
 
     def on_mount(self):
-        self.push_screen("main")
+        self.push_screen(MainMenuScreen())
 
 
 def main():
     parser = argparse.ArgumentParser(prog="mulgogi", description="A fishing game in your terminal")
-    parser.add_argument("--version", action="version", version="%(prog)s 0.2.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.2.1")
     parser.parse_args()
     app = MulgogiApp()
     app.run()

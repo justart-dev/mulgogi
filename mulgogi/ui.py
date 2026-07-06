@@ -129,27 +129,27 @@ class MainMenuScreen(Screen):
     def on_button_pressed(self, event):
         button_id = event.button.id
         if button_id == "fish":
-            self.app.push_screen("spots")
+            self.app.push_screen(SpotSelectScreen(self.app.game_state))
         elif button_id == "collection":
-            self.app.push_screen("collection")
+            self.app.push_screen(CollectionScreen(self.app.game_state))
         elif button_id == "shop":
-            self.app.push_screen("shop")
+            self.app.push_screen(ShopScreen(self.app.game_state))
         elif button_id == "stats":
-            self.app.push_screen("stats")
+            self.app.push_screen(StatsScreen(self.app.game_state))
         elif button_id == "quit":
             self.app.exit()
 
     def action_fish(self):
-        self.app.push_screen("spots")
+        self.app.push_screen(SpotSelectScreen(self.app.game_state))
 
     def action_collection(self):
-        self.app.push_screen("collection")
+        self.app.push_screen(CollectionScreen(self.app.game_state))
 
     def action_shop(self):
-        self.app.push_screen("shop")
+        self.app.push_screen(ShopScreen(self.app.game_state))
 
     def action_stats(self):
-        self.app.push_screen("stats")
+        self.app.push_screen(StatsScreen(self.app.game_state))
 
     def action_quit(self):
         self.app.exit()
@@ -530,7 +530,7 @@ class SpotSelectScreen(Screen):
         button_id = event.button.id
         if button_id.startswith("spot-"):
             spot_id = button_id.replace("spot-", "")
-            self.app.push_screen("fishing", spot_id)
+            self.app.push_screen(FishingScreen(self.app.game_state, spot_id))
 
     def action_back(self):
         self.app.pop_screen()
