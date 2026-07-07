@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mulgogi"
-version = "0.4.8"
+version = "0.4.9"
 description = "A lightweight terminal fishing game with pixel-art sprites, progression, and a collection system."
 requires-python = ">=3.9"
 license = "MIT"
