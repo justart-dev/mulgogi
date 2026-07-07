@@ -136,6 +136,12 @@ class SplashWidget(Static):
         if self._timer:
             self._timer.stop()
 
+    def start(self):
+        self._running = True
+        if self._timer:
+            self._timer.stop()
+        self._timer = self.set_interval(0.15, self._tick)
+
 
 class AngleWidget(Static):
     angle = reactive(45)
@@ -362,7 +368,9 @@ class FishingScreen(Screen):
         self.query_one("#status", Static).update(self._status_text())
         self.query_one("#help", Static).update("물고기가 물기를 기다리는 중...")
         self.query_one("#angle", AngleWidget).display = False
-        self.query_one("#splash", SplashWidget).display = True
+        splash = self.query_one("#splash", SplashWidget)
+        splash.start()
+        splash.display = True
         self.query_one("#result", PlainStatic).update("")
         self.pending_bite_delay = random.uniform(3.0, 10.0)
         event_delay = random.uniform(1.0, 2.0)
