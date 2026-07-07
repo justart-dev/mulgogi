@@ -18,6 +18,7 @@ class MulgogiApp(App):
     """mulgogi 메인 앱"""
 
     CSS_PATH = "mulgogi.tcss"
+    ENABLE_COMMAND_PALETTE = False
 
     def __init__(self):
         super().__init__()

@@ -26,6 +26,7 @@ from .data import (
     SPOT_DATA,
     RARITY_NAMES,
     RARITY_STARS,
+    RARITY_COLORS,
     Fish,
 )
 from .game import GameState, save_state
@@ -45,8 +46,10 @@ def current_time_of_day() -> str:
 
 
 def current_weather() -> str:
-    # 게임 속 날씨는 런덤으로 결정 (세션 당 구절마다 초기화)
-    return random.choice(["sunny", "cloudy", "rainy"])
+    # 게임 속 날씨는 실제 날짜를 기준으로 결정 (같은 날은 같은 날씨)
+    today = datetime.now().date()
+    rng = random.Random(today.toordinal())
+    return rng.choice(["sunny", "cloudy", "rainy"])
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -193,20 +196,21 @@ class MainMenuScreen(Screen):
         ("3", "shop", "상점"),
         ("4", "achievements", "업적"),
         ("5", "stats", "통계"),
+        ("6", "aquarium", "어항"),
         ("q", "quit", "종료"),
     ]
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="menu"):
-            yield PlainStatic(Text.assemble(("~$ ", "#33d9b2"), ("mulgogi", "#f0f0f0")), classes="prompt")
             yield PlainStatic(MULGOGI_ASCII, classes="title")
-            yield PlainStatic(gradient_text("터미널에서 즐기는 낚시 게임", ["#33d9b2", "#f1fa8c"]), classes="subtitle")
+            yield PlainStatic(gradient_text("Fish in your shell", ["#33d9b2", "#f1fa8c"]), classes="subtitle")
             yield PlainStatic("")
             yield Button("1. 낚시하기", id="fish")
             yield Button("2. 도감", id="collection")
             yield Button("3. 상점", id="shop")
             yield Button("4. 업적", id="achievements")
             yield Button("5. 통계", id="stats")
+            yield Button("6. 어항", id="aquarium")
             yield Button("q. 종료", id="quit", variant="error")
             yield PlainStatic("")
             yield PlainStatic("방향키 또는 숫자/엔터/클릭으로 선택  |  q: 종료", classes="help")
@@ -245,6 +249,8 @@ class MainMenuScreen(Screen):
             self.app.push_screen(AchievementsScreen(self.app.game_state))
         elif button_id == "stats":
             self.app.push_screen(StatsScreen(self.app.game_state))
+        elif button_id == "aquarium":
+            self.app.push_screen(AquariumScreen(self.app.game_state))
         elif button_id == "quit":
             self.app.exit()
 
@@ -262,6 +268,9 @@ class MainMenuScreen(Screen):
 
     def action_stats(self):
         self.app.push_screen(StatsScreen(self.app.game_state))
+
+    def action_aquarium(self):
+        self.app.push_screen(AquariumScreen(self.app.game_state))
 
     def action_quit(self):
         self.app.exit()
@@ -281,6 +290,7 @@ class FishingScreen(Screen):
         self.angle = 45
         self.bite_timer = None
         self.reel_timer = None
+        self.event_timer = None
         self.reel_pos = 0.0
         self.reel_dir = 1
         self.reel_speed = 0.06
@@ -343,12 +353,104 @@ class FishingScreen(Screen):
         self.phase = "waiting"
         self.state.stats.total_casts += 1
         self.query_one("#status", Static).update(self._status_text())
-        self.query_one("#help", Static).update("물고기가 물기를 기다리는 중...  Space: 입질 시도")
+        self.query_one("#help", Static).update("물고기가 물기를 기다리는 중...")
         self.query_one("#angle", AngleWidget).display = False
         self.query_one("#splash", SplashWidget).display = True
         self.query_one("#result", PlainStatic).update("")
-        delay = random.uniform(3.0, 10.0)
-        self.bite_timer = self.set_timer(delay, self.trigger_bite)
+        self.pending_bite_delay = random.uniform(3.0, 10.0)
+        event_delay = random.uniform(1.0, 2.0)
+        self.event_timer = self.set_timer(event_delay, self._check_random_event)
+
+    def _check_random_event(self):
+        if self.phase != "waiting":
+            return
+        roll = random.random()
+        events = [
+            ("crab", 0.01),
+            ("seagull", 0.01),
+            ("worm_revolt", 0.01),
+            ("fish_tease", 0.01),
+            ("rubber_duck", 0.01),
+        ]
+        cumulative = 0.0
+        for name, prob in events:
+            cumulative += prob
+            if roll < cumulative:
+                self._trigger_event(name)
+                return
+        # 아무 이벤트도 없으면 정상 입질 타이머 시작
+        self.bite_timer = self.set_timer(self.pending_bite_delay, self.trigger_bite)
+
+    def _trigger_event(self, event_name: str):
+        self._stop_all_timers()
+        self.phase = "result"
+        self.query_one("#splash", SplashWidget).stop()
+        self.query_one("#splash", SplashWidget).display = False
+        self.query_one("#help", Static).update("Space: 계속  |  Esc: 뒤로")
+
+        if event_name == "crab":
+            self._event_bait_thief_crab()
+        elif event_name == "seagull":
+            self._event_seagull_steal()
+        elif event_name == "worm_revolt":
+            self._event_worm_revolt()
+        elif event_name == "fish_tease":
+            self._event_fish_tease()
+        elif event_name == "rubber_duck":
+            self._event_rubber_duck()
+
+        save_state(self.state)
+
+    def _event_bait_thief_crab(self):
+        self.state.player.bait_id = "worm"
+        self.query_one("#status", Static).update(self._status_text())
+        self.query_one("#result", PlainStatic).update(
+            Text("게가 미끼를 훔쳐갔다! 대신 기본 지렁이를 달았다.", style="yellow")
+        )
+
+    def _event_seagull_steal(self):
+        fish = self._pick_fish()
+        result_text = Text.assemble(
+            ("물고기를 방금 잡았는데 갈매기가 낚아채갔다!", "red"),
+            "\n\n",
+            fish_sprite(fish.id),
+            "\n\n",
+            f"도망간 물고기: {fish.name} (희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]})",
+        )
+        self.query_one("#result", PlainStatic).update(result_text)
+
+    def _event_worm_revolt(self):
+        leveled_up = self.state.add_exp(3)
+        self.query_one("#status", Static).update(self._status_text())
+        result_text = Text.assemble(
+            ("지렁이가 통에서 반란을 일으켜 도망쳤다!", "magenta"),
+            "\n",
+            "대신 물고기 냄새를 맡고 주변에 물고기들이 몰려든다.",
+            ("\n경험치 +3", "green"),
+            (" ★ 레벨업!", "bold yellow") if leveled_up else ("", ""),
+        )
+        self.query_one("#result", PlainStatic).update(result_text)
+
+    def _event_fish_tease(self):
+        self.query_one("#result", PlainStatic).update(
+            Text("물고기가 미끼만 뜯어먹고 도망갔다! 농락당했다...", style="red")
+        )
+
+    def _event_rubber_duck(self):
+        duck_sprite = (
+            "    _      _      _\n"
+            "  >(.)__ <(.)__ =(.)__\n"
+            "   (___/  (___/  (___/\n"
+        )
+        self.query_one("#result", PlainStatic).update(
+            Text.assemble(
+                ("노란 고무 오리를 낚았다!", "yellow"),
+                "\n\n",
+                duck_sprite,
+                "\n",
+                "누가 버린 장난감이다. 다시 던져보자.",
+            )
+        )
 
     def trigger_bite(self):
         if self.phase != "waiting":
@@ -386,6 +488,9 @@ class FishingScreen(Screen):
         if self.bite_timer:
             self.bite_timer.stop()
             self.bite_timer = None
+        if self.event_timer:
+            self.event_timer.stop()
+            self.event_timer = None
         if self.reel_timer:
             self.reel_timer.stop()
             self.reel_timer = None
@@ -415,12 +520,6 @@ class FishingScreen(Screen):
             self.catch_fish()
         else:
             self.lose_fish()
-
-    def action_back(self):
-        self._stop_all_timers()
-        self.query_one("#splash", SplashWidget).stop()
-        save_state(self.state)
-        self.app.pop_screen()
 
     def _pick_fish(self) -> Fish:
         spot = SPOT_BY_ID[self.spot_id]
@@ -488,6 +587,8 @@ class FishingScreen(Screen):
         self.query_one("#result", PlainStatic).update("")
 
     def action_back(self):
+        self._stop_all_timers()
+        self.query_one("#splash", SplashWidget).stop()
         save_state(self.state)
         self.app.pop_screen()
 
@@ -749,6 +850,140 @@ class AchievementsScreen(Screen):
                 for bid, t in self._title_buttons.items():
                     btn = self.query_one(f"#{bid}", Button)
                     btn.variant = "success" if t == title else "primary"
+
+    def action_back(self):
+        self.app.pop_screen()
+
+
+class AquariumWidget(Static):
+    frame = reactive(0)
+
+    def __init__(self, state: GameState, **kwargs):
+        super().__init__("", **kwargs)
+        self.state = state
+        self.tank_width = 62
+        self.tank_height = 16
+        self.max_fish = 8
+        self.fish = self._populate()
+        self._timer = None
+
+    def _populate(self):
+        fish_ids = list(self.state.collection.keys())
+        if not fish_ids:
+            return []
+        random.shuffle(fish_ids)
+        selected = fish_ids[: self.max_fish]
+        result = []
+        lanes = list(range(2, self.tank_height - 2))
+        random.shuffle(lanes)
+        for i, fid in enumerate(selected):
+            if i >= len(lanes):
+                break
+            fish = FISH_BY_ID[fid]
+            result.append(
+                {
+                    "fish": fish,
+                    "x": random.randint(3, self.tank_width - 12),
+                    "y": lanes[i],
+                    "dir": random.choice([-1, 1]),
+                    "speed": random.choice([1, 1, 2]),
+                }
+            )
+        return result
+
+    def on_mount(self):
+        self._timer = self.set_interval(0.35, self._tick)
+
+    def on_unmount(self):
+        if self._timer:
+            self._timer.stop()
+            self._timer = None
+
+    def _tick(self):
+        self.frame += 1
+        for f in self.fish:
+            f["x"] += f["dir"] * f["speed"]
+            fish_width = self._fish_width(f)
+            if f["x"] <= 1:
+                f["x"] = 1
+                f["dir"] = 1
+            elif f["x"] >= self.tank_width - fish_width - 1:
+                f["x"] = self.tank_width - fish_width - 1
+                f["dir"] = -1
+
+    def _fish_width(self, f):
+        return len(f["fish"].name) + 2
+
+    def _fish_chars(self, f):
+        fish = f["fish"]
+        head = ">" if f["dir"] > 0 else "<"
+        tail = "<" if f["dir"] > 0 else ">"
+        color = RARITY_COLORS.get(fish.rarity, "white")
+        chars = []
+        chars.append((tail, color))
+        for ch in fish.name:
+            chars.append((ch, color))
+        chars.append((head, color))
+        return chars
+
+    def render(self):
+        if not self.fish:
+            return Text("아직 이 곳에 머물 영혼이 없다. 낚시터에서 만남을 기다리자.", style="dim")
+
+        lines = []
+        width = self.tank_width
+        height = self.tank_height
+
+        for y in range(height):
+            if y == 0:
+                line = Text("┌" + "─" * (width - 2) + "┐", style="cyan")
+            elif y == height - 1:
+                line = Text("└" + "─" * (width - 2) + "┘", style="cyan")
+            else:
+                fish_on_row = [f for f in self.fish if int(f["y"]) == y]
+                fish_on_row.sort(key=lambda f: f["x"])
+                line_chars = [(" ", None)] * (width - 2)
+                for f in fish_on_row:
+                    fx = int(f["x"])
+                    for i, (ch, style) in enumerate(self._fish_chars(f)):
+                        pos = fx + i - 1
+                        if 0 <= pos < len(line_chars):
+                            line_chars[pos] = (ch, style)
+
+                line = Text("│", style="cyan")
+                for ch, style in line_chars:
+                    line.append_text(Text(ch, style=style or ""))
+                line.append_text(Text("│", style="cyan"))
+            lines.append(line)
+
+        return Text("\n").join(lines)
+
+
+class AquariumScreen(Screen):
+    BINDINGS = [
+        ("escape", "back", "뒤로"),
+        ("q", "back", "뒤로"),
+        ("r", "refresh", "새로고침"),
+    ]
+
+    def __init__(self, state: GameState, **kwargs):
+        super().__init__(**kwargs)
+        self.state = state
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="aquarium"):
+            yield PlainStatic("물고기들의 영혼이 담긴 어항", classes="title")
+            yield PlainStatic("도감에 새겨진 기억들이 물속을 뛰어다닌다.", classes="subtitle")
+            yield PlainStatic("")
+            yield AquariumWidget(self.state, id="tank")
+            yield PlainStatic("")
+            yield PlainStatic("r: 영혼 새로 불러내기  |  Esc 또는 q: 뒤로", id="help")
+        yield Footer()
+
+    def action_refresh(self):
+        widget = self.query_one("#tank", AquariumWidget)
+        widget.fish = widget._populate()
+        widget.refresh()
 
     def action_back(self):
         self.app.pop_screen()

@@ -130,3 +130,4 @@ BAIT_BY_ID = {b.id: b for b in BAIT_DATA}
 
 RARITY_NAMES = {1: "Common", 2: "Uncommon", 3: "Rare", 4: "Epic", 5: "Legendary"}
 RARITY_STARS = {1: "★", 2: "★★", 3: "★★★", 4: "★★★★", 5: "★★★★★"}
+RARITY_COLORS = {1: "#95a5a6", 2: "#2ecc71", 3: "#3498db", 4: "#9b59b6", 5: "#f1c40f"}
