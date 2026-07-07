@@ -1,38 +1,44 @@
 # 🎣 mulgogi
 
-**터미널에서 즐기는 픽셀 아트 낚시 게임**
+**Fish in your shell** — a fishing game that runs entirely in your terminal.
 
-`mulgogi`는 Python + Textual로 만든 CLI 낚시 게입니다. 
-방향키와 Space만으로 각도를 조절하고, 입질 타이밍을 맞춰 물고기를 잡으세요.
-
----
-
-## 스크린샷
-
-### 메인 메뉴
-![main menu](screenshots/main_menu.svg)
-
-### 낚시 결과
-![fishing result](screenshots/fishing_result.svg)
-
-### 도감
-![collection](screenshots/collection.svg)
-
-### 상점
-![shop](screenshots/shop.svg)
+`mulgogi` is a pixel-art fishing TUI built with Python + Textual.
+Cast your line, time the bite, reel it in, and fill your collection — all from the comfort of your shell.
 
 ---
 
-## 설치
+## Screenshots
 
-### pip（크로스 플랫포름）
+### Main Menu
+![main menu](screenshots/main_menu.png)
+
+### Fishing
+![fishing](screenshots/fishing.png)
+
+### Collection
+![collection](screenshots/collection.png)
+
+### Aquarium
+![aquarium](screenshots/aquarium.png)
+
+### Shop
+![shop](screenshots/shop.png)
+
+### Settings (sprite style)
+![settings](screenshots/settings.png)
+
+---
+
+## Install
+
+### pip (cross-platform)
 
 ```bash
 pip install mulgogi
 mulgogi
 ```
 
-### Homebrew（macOS / Linux）
+### Homebrew (macOS / Linux)
 
 ```bash
 brew tap justart-dev/mulgogi
@@ -40,7 +46,7 @@ brew install justart-dev/mulgogi/mulgogi
 mulgogi
 ```
 
-### 소스 실행
+### From source
 
 ```bash
 git clone https://github.com/justart-dev/mulgogi.git
@@ -50,40 +56,44 @@ python3 -m mulgogi
 
 ---
 
-## 조작법
+## Controls
 
-| 키 | 동작 |
+| Key | Action |
 |---|---|
-| `1` | 낚시하기 |
-| `2` | 도감 |
-| `3` | 상점 |
-| `4` | 업적 |
-| `5` | 통계 |
-| `q` | 종료 |
-| `←` / `→` | 각도 조절 |
-| `Space` | 캐스트 / 입질 / 릴 멈춤 |
-| `Esc` | 뒤로 |
+| `1` | Fish |
+| `2` | Collection |
+| `3` | Shop |
+| `4` | Achievements |
+| `5` | Stats |
+| `6` | Aquarium |
+| `7` | Settings |
+| `q` | Quit |
+| `←` / `→` | Adjust angle |
+| `Space` | Cast / Bite / Stop reel |
+| `Esc` | Back |
 
 ---
 
-## 기능
+## Features
 
-- **25종의 다양한 물고기** — 연못, 강, 호수, 바다에 생태를 바뀌며 사는 물고기들
-- **픽셀 아트** — 종류별로 색감을 달리한 터미널 스프라이트
-- **성장 시스템** — 레벨/경험치, 낚시터 해제, 낚싯대/미끼 구매
-- **도감 & 업적** — 잡은 물고기를 모으고 칭호를 얻으세요
-- **차콜 컬러 테마** — 차콜 배경에 민트 그린 악센트
+- **25 fish species** across ponds, rivers, lakes, and oceans — each with rarity tiers
+- **Sprite styles** — switch between ASCII, block, and braille rendering in settings
+- **Random events** — crabs, seagulls, rubber ducks, and more
+- **Progression** — level up, unlock fishing spots, buy rods and bait
+- **Collection & achievements** — catch them all and earn titles
+- **Aquarium** — a serene tank where your collected fish souls swim
+- **Weather** — date-based weather adds variety without losing immersion
 
 ---
 
-## 기술 스택
+## Tech Stack
 
 - **Language:** Python 3.9+
 - **TUI Framework:** [Textual](https://textual.textualize.io/)
-- **배포:** Trusted Publishing(PyPI) + GitHub Releases + Homebrew tap
+- **Distribution:** PyPI (Trusted Publishing) + Homebrew tap
 
 ---
 
-## 라이센스
+## License
 
 MIT License
