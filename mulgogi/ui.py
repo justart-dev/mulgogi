@@ -1199,6 +1199,8 @@ class SettingsScreen(Screen):
 
     def action_back(self):
         self.app.pop_screen()
+        # 언어/스타일 변경이 부모 화면에 즉시 반영되도록 recompose
+        self.app.screen.refresh(recompose=True)
 
 
 class SpotSelectScreen(Screen):
