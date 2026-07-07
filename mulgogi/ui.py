@@ -31,7 +31,7 @@ from .data import (
 )
 from .game import GameState, save_state
 from .particles import ParticleEmitter, ParticleOverlay
-from .pixel_art import fish_sprite
+from .pixel_art import fish_sprite, VALID_STYLES
 
 
 def current_time_of_day() -> str:
@@ -197,6 +197,7 @@ class MainMenuScreen(Screen):
         ("4", "achievements", "업적"),
         ("5", "stats", "통계"),
         ("6", "aquarium", "어항"),
+        ("7", "settings", "설정"),
         ("q", "quit", "종료"),
     ]
 
@@ -211,6 +212,7 @@ class MainMenuScreen(Screen):
             yield Button("4. 업적", id="achievements")
             yield Button("5. 통계", id="stats")
             yield Button("6. 어항", id="aquarium")
+            yield Button("7. 설정", id="settings")
             yield Button("q. 종료", id="quit", variant="error")
             yield PlainStatic("")
             yield PlainStatic("방향키 또는 숫자/엔터/클릭으로 선택  |  q: 종료", classes="help")
@@ -251,6 +253,8 @@ class MainMenuScreen(Screen):
             self.app.push_screen(StatsScreen(self.app.game_state))
         elif button_id == "aquarium":
             self.app.push_screen(AquariumScreen(self.app.game_state))
+        elif button_id == "settings":
+            self.app.push_screen(SettingsScreen(self.app.game_state))
         elif button_id == "quit":
             self.app.exit()
 
@@ -271,6 +275,9 @@ class MainMenuScreen(Screen):
 
     def action_aquarium(self):
         self.app.push_screen(AquariumScreen(self.app.game_state))
+
+    def action_settings(self):
+        self.app.push_screen(SettingsScreen(self.app.game_state))
 
     def action_quit(self):
         self.app.exit()
@@ -413,7 +420,7 @@ class FishingScreen(Screen):
         result_text = Text.assemble(
             ("물고기를 방금 잡았는데 갈매기가 낚아채갔다!", "red"),
             "\n\n",
-            fish_sprite(fish.id),
+            fish_sprite(fish.id, self.state.sprite_style),
             "\n\n",
             f"도망간 물고기: {fish.name} (희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]})",
         )
@@ -562,10 +569,10 @@ class FishingScreen(Screen):
             (f"{fish.name}을(를) 잡았다!", "green"),
             (" ★ 레벨업!", "bold yellow") if leveled_up else ("", ""),
             (f"\n★ 업적 달성: {names}{title_text}", "bold magenta") if new_achievements else ("", ""),
-            "\n\n",
-            fish_sprite(fish.id),
-            "\n\n",
-            f"무게: {weight}kg  |  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\n",
+ "\n\n",
+ fish_sprite(fish.id, self.state.sprite_style),
+ "\n\n",
+ f"무게: {weight}kg|  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\n",
             f"골드 +{gold}  경험치 +{exp}\n",
         )
         self.query_one("#result", PlainStatic).update(result_text)
@@ -984,6 +991,74 @@ class AquariumScreen(Screen):
         widget = self.query_one("#tank", AquariumWidget)
         widget.fish = widget._populate()
         widget.refresh()
+
+    def action_back(self):
+        self.app.pop_screen()
+
+
+class SettingsScreen(Screen):
+    """설정 화면 - 물고기 스프라이트 스타일 선택 + 미리보기."""
+
+    BINDINGS = [
+        ("escape", "back", "뒤로"),
+        ("q", "back", "뒤로"),
+    ]
+
+    def __init__(self, state: GameState, **kwargs):
+        super().__init__(**kwargs)
+        self.state = state
+        self._sample_fish_id = "carp"
+        from .data import FISH_BY_ID
+        if self._sample_fish_id not in FISH_BY_ID:
+            self._sample_fish_id = next(iter(FISH_BY_ID))
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="settings"):
+            yield PlainStatic("설정", classes="title")
+            yield PlainStatic("")
+            yield PlainStatic("물고기 스프라이트 스타일", classes="section")
+            yield PlainStatic("낚시 결과와 갈매기 이벤트에서 표시할 물고기 그림 스타일을 고르세요.")
+            yield PlainStatic("")
+            current = self.state.sprite_style
+            for s in VALID_STYLES:
+                label = f"{s}"
+                if s == current:
+                    variant = "success"
+                    label = f"{s}  ✓ (현재)"
+                else:
+                    variant = "default"
+                btn = Button(Text(label), id=f"style-{s}", variant=variant)
+                yield btn
+            yield PlainStatic("")
+            yield PlainStatic("미리보기", classes="section")
+            yield PlainStatic(self._preview(self.state.sprite_style), id="preview")
+            yield PlainStatic("")
+            yield PlainStatic("Esc 또는 q: 뒤로", id="help")
+        yield Footer()
+
+    def _preview(self, style: str) -> Text:
+        return fish_sprite(self._sample_fish_id, style)
+
+    def on_button_pressed(self, event):
+        button_id = event.button.id or ""
+        if button_id.startswith("style-"):
+            style = button_id.replace("style-", "")
+            if style in VALID_STYLES:
+                self.state.sprite_style = style
+                save_state(self.state)
+                self._refresh_buttons()
+                self.query_one("#preview", PlainStatic).update(self._preview(style))
+
+    def _refresh_buttons(self):
+        current = self.state.sprite_style
+        for s in VALID_STYLES:
+            btn = self.query_one(f"#style-{s}", Button)
+            if s == current:
+                btn.variant = "success"
+                btn.label = Text(f"{s}  ✓ (현재)")
+            else:
+                btn.variant = "default"
+                btn.label = Text(f"{s}")
 
     def action_back(self):
         self.app.pop_screen()

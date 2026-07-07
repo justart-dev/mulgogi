@@ -63,6 +63,7 @@ class GameState:
     achievements: Set[str] = field(default_factory=set)
     stats: Stats = field(default_factory=Stats)
     started_at: str = field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
+    sprite_style: str = "ascii"  # "ascii" | "block" | "braille"
 
     def current_rod(self) -> Rod:
         return ROD_BY_ID.get(self.player.rod_id, ROD_DATA[0])
@@ -192,6 +193,7 @@ class GameState:
             "achievements": sorted(list(self.achievements)),
             "stats": asdict(self.stats),
             "started_at": self.started_at,
+            "sprite_style": self.sprite_style,
         }
 
     @classmethod
@@ -203,7 +205,8 @@ class GameState:
         achievements = set(data.get("achievements", []))
         stats = Stats(**data.get("stats", {}))
         started_at = data.get("started_at", time.strftime("%Y-%m-%d %H:%M:%S"))
-        return cls(player, collection, achievements, stats, started_at)
+        sprite_style = data.get("sprite_style", "ascii")
+        return cls(player, collection, achievements, stats, started_at, sprite_style)
 
 
 def load_state() -> GameState:
