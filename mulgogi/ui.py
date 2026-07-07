@@ -887,11 +887,15 @@ class AquariumWidget(Static):
             if i >= len(lanes):
                 break
             fish = FISH_BY_ID[fid]
+            sprite = fish_sprite(fid, self.state.sprite_style)
+            sprite_h = len(str(sprite).split("\n"))
+            max_y = self.tank_height - 1 - sprite_h
+            y = min(lanes[i], max_y)
             result.append(
                 {
                     "fish": fish,
                     "x": random.randint(3, self.tank_width - 12),
-                    "y": lanes[i],
+                    "y": y,
                     "dir": random.choice([-1, 1]),
                     "speed": random.choice([1, 1, 2]),
                 }
@@ -919,19 +923,18 @@ class AquariumWidget(Static):
                 f["dir"] = -1
 
     def _fish_width(self, f):
-        return len(f["fish"].name) + 2
+        sprite_lines = self._fish_sprite_lines(f)
+        if not sprite_lines:
+            return len(f["fish"].name) + 2
+        return max(len(str(line)) for line in sprite_lines)
 
-    def _fish_chars(self, f):
+    def _fish_sprite_lines(self, f):
+        """선택된 스프라이트 스타일로 물고기 스프라이트를 줄 단위로 반환."""
         fish = f["fish"]
-        head = ">" if f["dir"] > 0 else "<"
-        tail = "<" if f["dir"] > 0 else ">"
-        color = RARITY_COLORS.get(fish.rarity, "white")
-        chars = []
-        chars.append((tail, color))
-        for ch in fish.name:
-            chars.append((ch, color))
-        chars.append((head, color))
-        return chars
+        style = self.state.sprite_style
+        sprite = fish_sprite(fish.id, style)
+        lines = str(sprite).split("\n")
+        return lines if lines else [fish.name]
 
     def render(self):
         if not self.fish:
@@ -947,15 +950,25 @@ class AquariumWidget(Static):
             elif y == height - 1:
                 line = Text("└" + "─" * (width - 2) + "┘", style="cyan")
             else:
-                fish_on_row = [f for f in self.fish if int(f["y"]) == y]
-                fish_on_row.sort(key=lambda f: f["x"])
+                # Collect sprite fragments for this row
+                fish_on_row = []
+                for f in self.fish:
+                    sprite_lines = self._fish_sprite_lines(f)
+                    fy = int(f["y"])
+                    sprite_h = len(sprite_lines)
+                    # Does this fish occupy the current row?
+                    row_in_sprite = y - fy
+                    if 0 <= row_in_sprite < sprite_h:
+                        fish_on_row.append((f["x"], row_in_sprite, sprite_lines[row_in_sprite], f))
+                fish_on_row.sort(key=lambda item: item[0])
                 line_chars = [(" ", None)] * (width - 2)
-                for f in fish_on_row:
-                    fx = int(f["x"])
-                    for i, (ch, style) in enumerate(self._fish_chars(f)):
-                        pos = fx + i - 1
-                        if 0 <= pos < len(line_chars):
-                            line_chars[pos] = (ch, style)
+                for fx, row_in_sprite, sprite_line, f in fish_on_row:
+                    color = RARITY_COLORS.get(f["fish"].rarity, "white")
+                    offset = fx - 1
+                    for i, ch in enumerate(sprite_line):
+                        pos = offset + i
+                        if 0 <= pos < len(line_chars) and ch != " ":
+                            line_chars[pos] = (ch, color)
 
                 line = Text("│", style="cyan")
                 for ch, style in line_chars:
@@ -1059,6 +1072,32 @@ class SettingsScreen(Screen):
             else:
                 btn.variant = "default"
                 btn.label = Text(f"{s}")
+
+    def on_mount(self):
+        buttons = list(self.query(Button))
+        if buttons:
+            buttons[0].focus()
+
+    def _style_buttons(self):
+        return list(self.query(Button))
+
+    def on_key(self, event):
+        if event.key not in ("up", "down"):
+            return
+        buttons = self._style_buttons()
+        if not buttons:
+            return
+        current = self.app.focused
+        try:
+            idx = buttons.index(current)
+        except ValueError:
+            idx = 0
+        if event.key == "down":
+            idx = (idx + 1) % len(buttons)
+        elif event.key == "up":
+            idx = (idx - 1) % len(buttons)
+        buttons[idx].focus()
+        event.stop()
 
     def action_back(self):
         self.app.pop_screen()
