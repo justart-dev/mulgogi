@@ -5,7 +5,9 @@
 `mulgogi` is a pixel-art fishing TUI built with Python + Textual.
 Cast your line, time the bite, reel it in, and fill your collection — all from the comfort of your shell.
 
-![main menu](screenshots/main_menu.png)
+<p align="center">
+  <img src="screenshots/main_menu.png" alt="mulgogi logo">
+</p>
 
 ---
 
