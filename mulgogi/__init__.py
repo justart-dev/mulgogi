@@ -4,4 +4,4 @@ try:
     from importlib.metadata import version
     __version__ = version("mulgogi")
 except Exception:
-    __version__ = "0.4.6"
+    __version__ = "0.4.7"
