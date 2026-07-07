@@ -20,6 +20,7 @@ from .data import (
     Rod,
     Bait,
 )
+from .i18n import bait_name, normalize_language, rod_name, t
 
 
 SAVE_DIR = Path.home() / ".local" / "share" / "mulgogi"
@@ -64,6 +65,7 @@ class GameState:
     stats: Stats = field(default_factory=Stats)
     started_at: str = field(default_factory=lambda: time.strftime("%Y-%m-%d %H:%M:%S"))
     sprite_style: str = "ascii"  # "ascii" | "block" | "braille"
+    language: str = "en"
 
     def current_rod(self) -> Rod:
         return ROD_BY_ID.get(self.player.rod_id, ROD_DATA[0])
@@ -166,25 +168,25 @@ class GameState:
 
     def buy_rod(self, rod_id: str) -> tuple[bool, str]:
         if rod_id == self.player.rod_id:
-            return False, "이미 소유한 낚싯대입니다."
+            return False, t(self.language, "already_have_rod")
         rod = ROD_BY_ID.get(rod_id)
         if not rod:
-            return False, "존재하지 않는 낚싯대입니다."
+            return False, t(self.language, "missing_rod")
         if self.player.gold < rod.price:
-            return False, f"골드가 부족합니다. (필요: {rod.price})"
+            return False, t(self.language, "not_enough_gold", price=rod.price)
         self.player.gold -= rod.price
         self.player.rod_id = rod_id
-        return True, f"{rod.name}을(를) 구매했습니다."
+        return True, t(self.language, "bought_rod", name=rod_name(self.language, rod))
 
     def buy_bait(self, bait_id: str) -> tuple[bool, str]:
         bait = BAIT_BY_ID.get(bait_id)
         if not bait:
-            return False, "존재하지 않는 미끼입니다."
+            return False, t(self.language, "missing_bait")
         if self.player.gold < bait.price:
-            return False, f"골드가 부족합니다. (필요: {bait.price})"
+            return False, t(self.language, "not_enough_gold", price=bait.price)
         self.player.gold -= bait.price
         self.player.bait_id = bait_id
-        return True, f"{bait.name}를 구매했습니다."
+        return True, t(self.language, "bought_bait", name=bait_name(self.language, bait))
 
     def to_dict(self) -> dict:
         return {
@@ -194,6 +196,7 @@ class GameState:
             "stats": asdict(self.stats),
             "started_at": self.started_at,
             "sprite_style": self.sprite_style,
+            "language": normalize_language(self.language),
         }
 
     @classmethod
@@ -206,7 +209,8 @@ class GameState:
         stats = Stats(**data.get("stats", {}))
         started_at = data.get("started_at", time.strftime("%Y-%m-%d %H:%M:%S"))
         sprite_style = data.get("sprite_style", "ascii")
-        return cls(player, collection, achievements, stats, started_at, sprite_style)
+        language = normalize_language(data.get("language", "en"))
+        return cls(player, collection, achievements, stats, started_at, sprite_style, language)
 
 
 def load_state() -> GameState:

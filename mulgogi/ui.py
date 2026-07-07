@@ -30,8 +30,30 @@ from .data import (
     Fish,
 )
 from .game import GameState, save_state
+from .i18n import (
+    LANGUAGE_NAMES,
+    achievement_description,
+    achievement_name,
+    achievement_title,
+    bait_description,
+    bait_name,
+    fish_name,
+    normalize_language,
+    rod_description,
+    rod_name,
+    spot_description,
+    spot_name,
+    t,
+    time_label,
+    title_label,
+    weather_label,
+)
 from .particles import ParticleEmitter, ParticleOverlay
 from .pixel_art import fish_sprite, VALID_STYLES
+
+
+def lang(state: GameState) -> str:
+    return normalize_language(state.language)
 
 
 def current_time_of_day() -> str:
@@ -145,6 +167,7 @@ class SplashWidget(Static):
 
 class AngleWidget(Static):
     angle = reactive(45)
+    language = reactive("en")
 
     def render(self):
         length = 10
@@ -162,12 +185,13 @@ class AngleWidget(Static):
         grid[5][12] = "O"
         lines = ["".join(row) for row in grid]
         lines_joined = "\n".join(lines)
-        return f"{lines_joined}\n\n각도: {self.angle}°"
+        return f"{lines_joined}\n\n{t(self.language, 'angle')}: {self.angle}°"
 
 
 class ReelWidget(Static):
     position = reactive(0.0)
     target_range = reactive(0.2)
+    language = reactive("en")
 
     def render(self):
         bar_width = 30
@@ -185,11 +209,11 @@ class ReelWidget(Static):
                 parts.append(Text("-", style="dim"))
         bar_text = Text.assemble(*parts)
         return Text.assemble(
-            "Space로 ",
+            t(self.language, "reel_instruction_start"),
             Text("O", style="bold white"),
-            "를 ",
-            Text("초록색 구간", style="green"),
-            "에 맞출 때 멈춰라\n[",
+            t(self.language, "reel_instruction_middle"),
+            Text(t(self.language, "green_zone"), style="green"),
+            t(self.language, "reel_instruction_end"),
             bar_text,
             "]",
         )
@@ -197,31 +221,32 @@ class ReelWidget(Static):
 
 class MainMenuScreen(Screen):
     BINDINGS = [
-        ("1", "fish", "낚시"),
-        ("2", "collection", "도감"),
-        ("3", "shop", "상점"),
-        ("4", "achievements", "업적"),
-        ("5", "stats", "통계"),
-        ("6", "aquarium", "어항"),
-        ("7", "settings", "설정"),
-        ("q", "quit", "종료"),
+        ("1", "fish", "Fish"),
+        ("2", "collection", "Collection"),
+        ("3", "shop", "Shop"),
+        ("4", "achievements", "Achievements"),
+        ("5", "stats", "Stats"),
+        ("6", "aquarium", "Aquarium"),
+        ("7", "settings", "Settings"),
+        ("q", "quit", "Quit"),
     ]
 
     def compose(self) -> ComposeResult:
+        language = lang(self.app.game_state)
         with Vertical(classes="menu"):
             yield PlainStatic(MULGOGI_ASCII, classes="title")
             yield PlainStatic(gradient_text("Fish in your shell", ["#33d9b2", "#f1fa8c"]), classes="subtitle")
             yield PlainStatic("")
-            yield Button("1. 낚시하기", id="fish")
-            yield Button("2. 도감", id="collection")
-            yield Button("3. 상점", id="shop")
-            yield Button("4. 업적", id="achievements")
-            yield Button("5. 통계", id="stats")
-            yield Button("6. 어항", id="aquarium")
-            yield Button("7. 설정", id="settings")
-            yield Button("q. 종료", id="quit", variant="error")
+            yield Button(f"1. {t(language, 'fish_action')}", id="fish")
+            yield Button(f"2. {t(language, 'collection')}", id="collection")
+            yield Button(f"3. {t(language, 'shop')}", id="shop")
+            yield Button(f"4. {t(language, 'achievements')}", id="achievements")
+            yield Button(f"5. {t(language, 'stats')}", id="stats")
+            yield Button(f"6. {t(language, 'aquarium')}", id="aquarium")
+            yield Button(f"7. {t(language, 'settings')}", id="settings")
+            yield Button(f"q. {t(language, 'quit')}", id="quit", variant="error")
             yield PlainStatic("")
-            yield PlainStatic("방향키 또는 숫자/엔터/클릭으로 선택  |  q: 종료", classes="help")
+            yield PlainStatic(t(language, "menu_help"), classes="help")
         yield Footer()
 
     def on_mount(self):
@@ -291,8 +316,8 @@ class MainMenuScreen(Screen):
 
 class FishingScreen(Screen):
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
     ]
 
     def __init__(self, state: GameState, spot_id: str = "pond", **kwargs):
@@ -311,14 +336,19 @@ class FishingScreen(Screen):
         self.time_of_day = current_time_of_day()
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(id="fishing-main"):
             yield PlainStatic(self._status_text(), id="status")
             yield PlainStatic(self._spot_text(), id="spot-info")
-            yield AngleWidget(id="angle")
+            angle = AngleWidget(id="angle")
+            angle.language = language
+            yield angle
             yield SplashWidget(id="splash")
-            yield ReelWidget(id="reel")
+            reel = ReelWidget(id="reel")
+            reel.language = language
+            yield reel
             yield PlainStatic("", id="result")
-            yield Static("← →: 각도  |  Space: 캐스트/입질/릴  |  Esc: 뒤로", id="help")
+            yield Static(t(language, "fishing_help"), id="help")
             yield ParticleOverlay(id="particles")
         yield Footer()
 
@@ -330,12 +360,24 @@ class FishingScreen(Screen):
         p = self.state.player
         rod = self.state.current_rod()
         bait = self.state.current_bait()
-        title_tag = f"({p.title}) " if p.title else ""
-        return f"{title_tag}Lv.{p.level}  골드:{p.gold}  낚싯대:{rod.name}  미끼:{bait.name if bait else '-'}"
+        language = lang(self.state)
+        title_tag = f"({title_label(language, p.title)}) " if p.title else ""
+        bait_text = bait_name(language, bait) if bait else "-"
+        return (
+            f"{title_tag}{t(language, 'level_short')}{p.level}  "
+            f"{t(language, 'gold')}:{p.gold}  "
+            f"{t(language, 'rod')}:{rod_name(language, rod)}  "
+            f"{t(language, 'bait')}:{bait_text}"
+        )
 
     def _spot_text(self) -> str:
         spot = SPOT_BY_ID[self.spot_id]
-        return f"낚시터: {spot.name} | 시간: {self.time_of_day} | 날씨: {self.weather}"
+        language = lang(self.state)
+        return (
+            f"{t(language, 'spot')}: {spot_name(language, spot)} | "
+            f"{t(language, 'time')}: {time_label(language, self.time_of_day)} | "
+            f"{t(language, 'weather')}: {weather_label(language, self.weather)}"
+        )
 
     def on_key(self, event):
         key = event.key
@@ -366,7 +408,7 @@ class FishingScreen(Screen):
         self.phase = "waiting"
         self.state.stats.total_casts += 1
         self.query_one("#status", Static).update(self._status_text())
-        self.query_one("#help", Static).update("물고기가 물기를 기다리는 중...")
+        self.query_one("#help", Static).update(t(lang(self.state), "waiting"))
         self.query_one("#angle", AngleWidget).display = False
         splash = self.query_one("#splash", SplashWidget)
         splash.start()
@@ -401,7 +443,7 @@ class FishingScreen(Screen):
         self.phase = "result"
         self.query_one("#splash", SplashWidget).stop()
         self.query_one("#splash", SplashWidget).display = False
-        self.query_one("#help", Static).update("Space: 계속  |  Esc: 뒤로")
+        self.query_one("#help", Static).update(t(lang(self.state), "continue_back"))
 
         if event_name == "crab":
             self._event_bait_thief_crab()
@@ -420,35 +462,38 @@ class FishingScreen(Screen):
         self.state.player.bait_id = "worm"
         self.query_one("#status", Static).update(self._status_text())
         self.query_one("#result", PlainStatic).update(
-            Text("게가 미끼를 훔쳐갔다! 대신 기본 지렁이를 달았다.", style="yellow")
+            Text(t(lang(self.state), "crab_event"), style="yellow")
         )
 
     def _event_seagull_steal(self):
         fish = self._pick_fish()
+        language = lang(self.state)
         result_text = Text.assemble(
-            ("물고기를 방금 잡았는데 갈매기가 낚아채갔다!", "red"),
+            (t(language, "seagull_event"), "red"),
             "\n\n",
             fish_sprite(fish.id, self.state.sprite_style),
             "\n\n",
-            f"도망간 물고기: {fish.name} (희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]})",
+            f"{t(language, 'escaped_fish')}: {fish_name(language, fish)} "
+            f"({t(language, 'rarity')}: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]})",
         )
         self.query_one("#result", PlainStatic).update(result_text)
 
     def _event_worm_revolt(self):
         leveled_up = self.state.add_exp(3)
+        language = lang(self.state)
         self.query_one("#status", Static).update(self._status_text())
         result_text = Text.assemble(
-            ("지렁이가 통에서 반란을 일으켜 도망쳤다!", "magenta"),
+            (t(language, "worm_event_1"), "magenta"),
             "\n",
-            "대신 물고기 냄새를 맡고 주변에 물고기들이 몰려든다.",
-            ("\n경험치 +3", "green"),
-            (" ★ 레벨업!", "bold yellow") if leveled_up else ("", ""),
+            t(language, "worm_event_2"),
+            ("\n" + t(language, "exp_gain", amount=3), "green"),
+            (t(language, "level_up"), "bold yellow") if leveled_up else ("", ""),
         )
         self.query_one("#result", PlainStatic).update(result_text)
 
     def _event_fish_tease(self):
         self.query_one("#result", PlainStatic).update(
-            Text("물고기가 미끼만 뜯어먹고 도망갔다! 농락당했다...", style="red")
+            Text(t(lang(self.state), "tease_event"), style="red")
         )
 
     def _event_rubber_duck(self):
@@ -459,11 +504,11 @@ class FishingScreen(Screen):
         )
         self.query_one("#result", PlainStatic).update(
             Text.assemble(
-                ("노란 고무 오리를 낚았다!", "yellow"),
+                (t(lang(self.state), "duck_event"), "yellow"),
                 "\n\n",
                 duck_sprite,
                 "\n",
-                "누가 버린 장난감이다. 다시 던져보자.",
+                t(lang(self.state), "duck_event_2"),
             )
         )
 
@@ -471,7 +516,7 @@ class FishingScreen(Screen):
         if self.phase != "waiting":
             return
         self.phase = "biting"
-        self.query_one("#help", Static).update("[bold][red]!! 입질 !!  Space를 눌러 릴을 걸어라![/red][/bold]")
+        self.query_one("#help", Static).update(f"[bold][red]{t(lang(self.state), 'bite')}[/red][/bold]")
         self.bite_timer = self.set_timer(1.5, self.miss_bite)
 
     def miss_bite(self):
@@ -480,8 +525,8 @@ class FishingScreen(Screen):
         self.phase = "result"
         self.query_one("#splash", SplashWidget).stop()
         self.query_one("#splash", SplashWidget).display = False
-        self.query_one("#help", Static).update("Space를 눌러 계속")
-        self.query_one("#result", PlainStatic).update(Text("입질을 놓쳤다... 미끼만 날아갔다.", style="red"))
+        self.query_one("#help", Static).update(t(lang(self.state), "continue"))
+        self.query_one("#result", PlainStatic).update(Text(t(lang(self.state), "missed_bite"), style="red"))
         save_state(self.state)
 
     def start_reel(self):
@@ -490,7 +535,7 @@ class FishingScreen(Screen):
         rod = self.state.current_rod()
         success_range = 0.2 + rod.reel_bonus
         self.query_one("#help", Static).update(
-            "[bold][cyan]챔질! Space로 O를 초록색 구간에 멈춰라.[/cyan][/bold]"
+            f"[bold][cyan]{t(lang(self.state), 'hook_set')}[/cyan][/bold]"
         )
         reel = self.query_one("#reel", ReelWidget)
         reel.target_range = success_range
@@ -564,32 +609,43 @@ class FishingScreen(Screen):
         save_state(self.state)
 
         if new_achievements:
-            names = ", ".join(a.name for a in new_achievements)
+            language = lang(self.state)
+            names = ", ".join(achievement_name(language, a) for a in new_achievements)
             titles = [a.title for a in new_achievements if a.title]
-            title_text = f"\n칭호: {', '.join(titles)}" if titles else ""
+            title_text = (
+                t(language, "title_result", titles=", ".join(title_label(language, title) for title in titles))
+                if titles else ""
+            )
         else:
             names = ""
             title_text = ""
 
+        language = lang(self.state)
         self.query_one("#status", Static).update(self._status_text())
-        self.query_one("#help", Static).update("Space: 계속  |  Esc: 뒤로")
+        self.query_one("#help", Static).update(t(language, "continue_back"))
         result_text = Text.assemble(
-            (f"{fish.name}을(를) 잡았다!", "green"),
-            (" ★ 레벨업!", "bold yellow") if leveled_up else ("", ""),
-            (f"\n★ 업적 달성: {names}{title_text}", "bold magenta") if new_achievements else ("", ""),
- "\n\n",
- fish_sprite(fish.id, self.state.sprite_style),
- "\n\n",
- f"무게: {weight}kg|  희귀도: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\n",
-            f"골드 +{gold}  경험치 +{exp}\n",
+            (t(language, "caught", fish=fish_name(language, fish)), "green"),
+            (t(language, "level_up"), "bold yellow") if leveled_up else ("", ""),
+            (
+                t(language, "achievement_unlocked", names=names, title_text=title_text),
+                "bold magenta",
+            ) if new_achievements else ("", ""),
+            "\n\n",
+            fish_sprite(fish.id, self.state.sprite_style),
+            "\n\n",
+            (
+                f"{t(language, 'weight')}: {weight}kg |  "
+                f"{t(language, 'rarity')}: {RARITY_NAMES[fish.rarity]} {RARITY_STARS[fish.rarity]}\n"
+            ),
+            t(language, "gold_exp_gain", gold=gold, exp=exp),
         )
         self.query_one("#result", PlainStatic).update(result_text)
         self.query_one("#particles", ParticleOverlay).burst()
 
     def lose_fish(self):
         self.phase = "result"
-        self.query_one("#help", Static).update("Space: 계속  |  Esc: 뒤로")
-        self.query_one("#result", PlainStatic).update(Text("물고기가 도망갔다... 다시 도전해보자.", style="red"))
+        self.query_one("#help", Static).update(t(lang(self.state), "continue_back"))
+        self.query_one("#result", PlainStatic).update(Text(t(lang(self.state), "fish_escaped"), style="red"))
         save_state(self.state)
 
     def reset(self):
@@ -598,7 +654,7 @@ class FishingScreen(Screen):
         self.query_one("#splash", SplashWidget).display = False
         self.query_one("#reel", ReelWidget).display = False
         self.query_one("#particles", ParticleOverlay).clear()
-        self.query_one("#help", Static).update("← →: 각도 조절  |  Space: 캐스트/입질/릴  |  Esc: 뒤로")
+        self.query_one("#help", Static).update(t(lang(self.state), "fishing_help_reset"))
         self.query_one("#result", PlainStatic).update("")
 
     def action_back(self):
@@ -610,8 +666,8 @@ class FishingScreen(Screen):
 
 class CollectionScreen(Screen):
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
     ]
 
     def __init__(self, state: GameState, **kwargs):
@@ -619,9 +675,13 @@ class CollectionScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(classes="collection"):
-            yield PlainStatic("도감", classes="title")
-            yield PlainStatic(f"총 {len(FISH_DATA)}종 중 {len(self.state.collection)}종 잡음", id="count")
+            yield PlainStatic(t(language, "collection"), classes="title")
+            yield PlainStatic(
+                t(language, "collection_count", total=len(FISH_DATA), caught=len(self.state.collection)),
+                id="count",
+            )
             yield PlainStatic("")
             fish_lines = []
             for fish in FISH_DATA:
@@ -629,7 +689,8 @@ class CollectionScreen(Screen):
                 if rec:
                     line = Text.assemble(
                         ("✓", "green"),
-                        f" {fish.name}  {RARITY_STARS[fish.rarity]}  최대 {rec.max_weight}kg  x{rec.count}",
+                        f" {fish_name(language, fish)}  {RARITY_STARS[fish.rarity]}  "
+                        f"{t(language, 'max_weight', weight=rec.max_weight)}  x{rec.count}",
                     )
                 else:
                     line = Text.assemble(
@@ -639,7 +700,7 @@ class CollectionScreen(Screen):
                 fish_lines.append(line)
             yield PlainStatic(Text("\n").join(fish_lines), id="fish-list")
             yield PlainStatic("")
-            yield PlainStatic("Esc 또는 q: 뒤로", id="help")
+            yield PlainStatic(t(language, "back_help"), id="help")
         yield Footer()
 
     def action_back(self):
@@ -648,8 +709,8 @@ class CollectionScreen(Screen):
 
 class ShopScreen(Screen):
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
     ]
 
     def __init__(self, state: GameState, **kwargs):
@@ -657,28 +718,29 @@ class ShopScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(classes="shop"):
-            yield PlainStatic("상점", classes="title")
-            yield PlainStatic(f"보유 골드: {self.state.player.gold}", id="gold")
+            yield PlainStatic(t(language, "shop"), classes="title")
+            yield PlainStatic(t(language, "gold_owned", gold=self.state.player.gold), id="gold")
             yield PlainStatic("")
-            yield PlainStatic("낚싯대", classes="section")
+            yield PlainStatic(t(language, "rods"), classes="section")
             for rod in ROD_DATA:
                 owned = rod.id == self.state.player.rod_id
-                status = "(소유 중)" if owned else f"{rod.price} 골드"
-                btn = Button(Text(f"{rod.name} - {status}"), id=f"rod-{rod.id}", disabled=owned)
-                btn.description = rod.description
+                status = t(language, "owned") if owned else f"{rod.price} {t(language, 'gold')}"
+                btn = Button(Text(f"{rod_name(language, rod)} - {status}"), id=f"rod-{rod.id}", disabled=owned)
+                btn.description = rod_description(language, rod)
                 yield btn
             yield PlainStatic("")
-            yield PlainStatic("미끼", classes="section")
+            yield PlainStatic(t(language, "bait_section"), classes="section")
             for bait in BAIT_DATA:
                 owned = bait.id == self.state.player.bait_id
-                status = "(장비 중)" if owned else f"{bait.price} 골드"
-                btn = Button(Text(f"{bait.name} - {status}"), id=f"bait-{bait.id}", disabled=owned)
-                btn.description = bait.description
+                status = t(language, "equipped") if owned else f"{bait.price} {t(language, 'gold')}"
+                btn = Button(Text(f"{bait_name(language, bait)} - {status}"), id=f"bait-{bait.id}", disabled=owned)
+                btn.description = bait_description(language, bait)
                 yield btn
             yield PlainStatic("")
             yield PlainStatic("", id="desc")
-            yield PlainStatic("Esc 또는 q: 뒤로", id="help")
+            yield PlainStatic(t(language, "back_help"), id="help")
         yield Footer()
 
     def _find_button(self, widget):
@@ -717,24 +779,26 @@ class ShopScreen(Screen):
         else:
             return
 
-        self.query_one("#gold", Static).update(f"보유 골드: {self.state.player.gold}")
+        language = lang(self.state)
+        self.query_one("#gold", Static).update(t(language, "gold_owned", gold=self.state.player.gold))
         self.query_one("#help", PlainStatic).update(msg)
         if ok:
             save_state(self.state)
             self._update_shop_buttons()
 
     def _update_shop_buttons(self):
+        language = lang(self.state)
         for rod in ROD_DATA:
             owned = rod.id == self.state.player.rod_id
-            status = "(소유 중)" if owned else f"{rod.price} 골드"
+            status = t(language, "owned") if owned else f"{rod.price} {t(language, 'gold')}"
             btn = self.query_one(f"#rod-{rod.id}", Button)
-            btn.label = Text(f"{rod.name} - {status}")
+            btn.label = Text(f"{rod_name(language, rod)} - {status}")
             btn.disabled = owned
         for bait in BAIT_DATA:
             owned = bait.id == self.state.player.bait_id
-            status = "(장비 중)" if owned else f"{bait.price} 골드"
+            status = t(language, "equipped") if owned else f"{bait.price} {t(language, 'gold')}"
             btn = self.query_one(f"#bait-{bait.id}", Button)
-            btn.label = Text(f"{bait.name} - {status}")
+            btn.label = Text(f"{bait_name(language, bait)} - {status}")
             btn.disabled = owned
 
     def action_back(self):
@@ -771,8 +835,8 @@ class ShopScreen(Screen):
 
 class StatsScreen(Screen):
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
     ]
 
     def __init__(self, state: GameState, **kwargs):
@@ -780,27 +844,28 @@ class StatsScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(classes="stats"):
-            yield PlainStatic("통계", classes="title")
+            yield PlainStatic(t(language, "stats"), classes="title")
             s = self.state.stats
             p = self.state.player
-            active_title = p.title or "없음"
+            active_title = title_label(language, p.title) if p.title else t(language, "none")
             text = (
-                f"칭호: {active_title}\n"
-                f"레벨: {p.level}\n"
-                f"경험치: {p.exp} / {self.state.exp_to_next()}\n"
-                f"보유 골드: {p.gold}\n"
-                f"총 캐스트 횟수: {s.total_casts}\n"
-                f"총 잡은 마리수: {s.total_caught}\n"
-                f"총 잡은 무게: {s.total_weight:.2f}kg\n"
-                f"총 번 골드: {s.total_gold_earned}\n"
-                f"밤 낚시 횟수: {s.night_catches}\n"
-                f"Epic 잡은 횟수: {s.epic_catches}  Legendary 잡은 횟수: {s.legendary_catches}\n"
-                f"시작일: {self.state.started_at}\n"
+                f"{t(language, 'title')}: {active_title}\n"
+                f"{t(language, 'level')}: {p.level}\n"
+                f"{t(language, 'exp')}: {p.exp} / {self.state.exp_to_next()}\n"
+                f"{t(language, 'gold_owned', gold=p.gold)}\n"
+                f"{t(language, 'total_casts')}: {s.total_casts}\n"
+                f"{t(language, 'total_caught')}: {s.total_caught}\n"
+                f"{t(language, 'total_weight')}: {s.total_weight:.2f}kg\n"
+                f"{t(language, 'total_gold')}: {s.total_gold_earned}\n"
+                f"{t(language, 'night_catches')}: {s.night_catches}\n"
+                f"{t(language, 'epic_legendary', epic=s.epic_catches, legendary=s.legendary_catches)}\n"
+                f"{t(language, 'started_at')}: {self.state.started_at}\n"
             )
             yield PlainStatic(text, id="stats-text")
             yield PlainStatic("")
-            yield PlainStatic("Esc 또는 q: 뒤로", id="help")
+            yield PlainStatic(t(language, "back_help"), id="help")
         yield Footer()
 
     def action_back(self):
@@ -809,8 +874,8 @@ class StatsScreen(Screen):
 
 class AchievementsScreen(Screen):
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
     ]
 
     def __init__(self, state: GameState, **kwargs):
@@ -819,25 +884,28 @@ class AchievementsScreen(Screen):
         self._title_buttons: dict[str, str] = {}
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(classes="achievements"):
-            yield PlainStatic("업적", classes="title")
-            active = self.state.player.title or "없음"
-            yield PlainStatic(f"장착 칭호: {active}", id="active-title")
+            yield PlainStatic(t(language, "achievements"), classes="title")
+            active = title_label(language, self.state.player.title) if self.state.player.title else t(language, "none")
+            yield PlainStatic(f"{t(language, 'active_title')}: {active}", id="active-title")
             yield PlainStatic("")
-            yield PlainStatic("업적 목록", classes="section")
+            yield PlainStatic(t(language, "achievement_list"), classes="section")
             for ach in ACHIEVEMENT_DATA.values():
                 unlocked = ach.id in self.state.achievements
                 mark = Text("✓", style="green") if unlocked else Text("-", style="dim")
-                title_part = f" / 칭호: {ach.title}" if ach.title else ""
+                translated_title = achievement_title(language, ach)
+                title_part = f" / {t(language, 'title')}: {translated_title}" if translated_title else ""
                 line = Text.assemble(
                     mark,
-                    f" {ach.name} - {ach.description} (보상: {ach.reward_gold}G, {ach.reward_exp}XP){title_part}",
+                    f" {achievement_name(language, ach)} - {achievement_description(language, ach)} "
+                    f"({t(language, 'reward')}: {ach.reward_gold}G, {ach.reward_exp}XP){title_part}",
                 )
                 if not unlocked:
                     line.stylize("dim")
                 yield PlainStatic(line)
             yield PlainStatic("")
-            yield PlainStatic("칭호", classes="section")
+            yield PlainStatic(t(language, "titles"), classes="section")
             unlocked_titles = [
                 ach.title for ach in ACHIEVEMENT_DATA.values()
                 if ach.title and ach.id in self.state.achievements
@@ -845,13 +913,13 @@ class AchievementsScreen(Screen):
             if unlocked_titles:
                 for idx, title in enumerate(unlocked_titles):
                     variant = "success" if title == self.state.player.title else "primary"
-                    btn = Button(Text(title), id=f"title-{idx}", variant=variant)
+                    btn = Button(Text(title_label(language, title)), id=f"title-{idx}", variant=variant)
                     self._title_buttons[f"title-{idx}"] = title
                     yield btn
             else:
-                yield PlainStatic("아직 해금된 칭호가 없습니다.")
+                yield PlainStatic(t(language, "no_titles"))
             yield PlainStatic("")
-            yield PlainStatic("Esc 또는 q: 뒤로", id="help")
+            yield PlainStatic(t(language, "back_help"), id="help")
         yield Footer()
 
     def on_button_pressed(self, event):
@@ -861,7 +929,10 @@ class AchievementsScreen(Screen):
             if title:
                 self.state.player.title = title
                 save_state(self.state)
-                self.query_one("#active-title", PlainStatic).update(f"장착 칭호: {title}")
+                language = lang(self.state)
+                self.query_one("#active-title", PlainStatic).update(
+                    f"{t(language, 'active_title')}: {title_label(language, title)}"
+                )
                 for bid, t in self._title_buttons.items():
                     btn = self.query_one(f"#{bid}", Button)
                     btn.variant = "success" if t == title else "primary"
@@ -946,7 +1017,7 @@ class AquariumWidget(Static):
 
     def render(self):
         if not self.fish:
-            return Text("아직 이 곳에 머물 영혼이 없다. 낚시터에서 만남을 기다리자.", style="dim")
+            return Text(t(lang(self.state), "empty_aquarium"), style="dim")
 
         lines = []
         width = self.tank_width
@@ -989,9 +1060,9 @@ class AquariumWidget(Static):
 
 class AquariumScreen(Screen):
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
-        ("r", "refresh", "새로고침"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
+        ("r", "refresh", "Refresh"),
     ]
 
     def __init__(self, state: GameState, **kwargs):
@@ -999,13 +1070,14 @@ class AquariumScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(classes="aquarium"):
-            yield PlainStatic("물고기들의 영혼이 담긴 어항", classes="title")
-            yield PlainStatic("도감에 새겨진 기억들이 물속을 뛰어다닌다.", classes="subtitle")
+            yield PlainStatic(t(language, "aquarium_title"), classes="title")
+            yield PlainStatic(t(language, "aquarium_subtitle"), classes="subtitle")
             yield PlainStatic("")
             yield AquariumWidget(self.state, id="tank")
             yield PlainStatic("")
-            yield PlainStatic("r: 영혼 새로 불러내기  |  Esc 또는 q: 뒤로", id="help")
+            yield PlainStatic(t(language, "aquarium_help"), id="help")
         yield Footer()
 
     def action_refresh(self):
@@ -1021,8 +1093,8 @@ class SettingsScreen(Screen):
     """설정 화면 - 물고기 스프라이트 스타일 선택 + 미리보기."""
 
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
     ]
 
     def __init__(self, state: GameState, **kwargs):
@@ -1034,27 +1106,38 @@ class SettingsScreen(Screen):
             self._sample_fish_id = next(iter(FISH_BY_ID))
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(classes="settings"):
-            yield PlainStatic("설정", classes="title")
+            yield PlainStatic(t(language, "settings"), classes="title")
             yield PlainStatic("")
-            yield PlainStatic("물고기 스프라이트 스타일", classes="section")
-            yield PlainStatic("낚시 결과와 갈매기 이벤트에서 표시할 물고기 그림 스타일을 고르세요.")
+            yield PlainStatic(t(language, "language"), classes="section")
+            yield PlainStatic(t(language, "language_desc"))
+            yield PlainStatic("")
+            for code in ("en", "ko"):
+                label = LANGUAGE_NAMES[code]
+                variant = "success" if code == language else "default"
+                if code == language:
+                    label = f"{label}  ✓ ({t(language, 'current')})"
+                yield Button(Text(label), id=f"language-{code}", variant=variant)
+            yield PlainStatic("")
+            yield PlainStatic(t(language, "sprite_style"), classes="section")
+            yield PlainStatic(t(language, "sprite_style_desc"))
             yield PlainStatic("")
             current = self.state.sprite_style
             for s in VALID_STYLES:
                 label = f"{s}"
                 if s == current:
                     variant = "success"
-                    label = f"{s}  ✓ (현재)"
+                    label = f"{s}  ✓ ({t(language, 'current')})"
                 else:
                     variant = "default"
                 btn = Button(Text(label), id=f"style-{s}", variant=variant)
                 yield btn
             yield PlainStatic("")
-            yield PlainStatic("미리보기", classes="section")
+            yield PlainStatic(t(language, "preview"), classes="section")
             yield PlainStatic(self._preview(self.state.sprite_style), id="preview")
             yield PlainStatic("")
-            yield PlainStatic("Esc 또는 q: 뒤로", id="help")
+            yield PlainStatic(t(language, "back_help"), id="help")
         yield Footer()
 
     def _preview(self, style: str) -> Text:
@@ -1069,14 +1152,21 @@ class SettingsScreen(Screen):
                 save_state(self.state)
                 self._refresh_buttons()
                 self.query_one("#preview", PlainStatic).update(self._preview(style))
+        elif button_id.startswith("language-"):
+            language = button_id.replace("language-", "")
+            if language in LANGUAGE_NAMES:
+                self.state.language = language
+                save_state(self.state)
+                self.refresh(recompose=True)
 
     def _refresh_buttons(self):
+        language = lang(self.state)
         current = self.state.sprite_style
         for s in VALID_STYLES:
             btn = self.query_one(f"#style-{s}", Button)
             if s == current:
                 btn.variant = "success"
-                btn.label = Text(f"{s}  ✓ (현재)")
+                btn.label = Text(f"{s}  ✓ ({t(language, 'current')})")
             else:
                 btn.variant = "default"
                 btn.label = Text(f"{s}")
@@ -1113,8 +1203,8 @@ class SettingsScreen(Screen):
 
 class SpotSelectScreen(Screen):
     BINDINGS = [
-        ("escape", "back", "뒤로"),
-        ("q", "back", "뒤로"),
+        ("escape", "back", "Back"),
+        ("q", "back", "Back"),
     ]
 
     def __init__(self, state: GameState, **kwargs):
@@ -1122,23 +1212,24 @@ class SpotSelectScreen(Screen):
         self.state = state
 
     def compose(self) -> ComposeResult:
+        language = lang(self.state)
         with Vertical(classes="spots"):
-            yield PlainStatic("낚시터 선택", classes="title")
-            yield PlainStatic("원하는 낚시터를 선택하세요.")
+            yield PlainStatic(t(language, "spot_select"), classes="title")
+            yield PlainStatic(t(language, "spot_select_desc"))
             yield PlainStatic("")
             for spot in SPOT_DATA:
                 unlocked = spot.id in self.state.player.unlocked_spots
-                locked_text = "가능" if unlocked else f"Lv.{spot.level_required} 해금"
+                locked_text = t(language, "available") if unlocked else t(language, "unlock_level", level=spot.level_required)
                 btn = Button(
-                    Text(f"{spot.name} - {locked_text}"),
+                    Text(f"{spot_name(language, spot)} - {locked_text}"),
                     id=f"spot-{spot.id}",
                     disabled=not unlocked,
                 )
-                btn.description = spot.description
+                btn.description = spot_description(language, spot)
                 yield btn
             yield PlainStatic("")
             yield PlainStatic("", id="desc")
-            yield PlainStatic("Esc 또는 q: 뒤로", id="help")
+            yield PlainStatic(t(language, "back_help"), id="help")
         yield Footer()
 
     def _find_button(self, widget):
